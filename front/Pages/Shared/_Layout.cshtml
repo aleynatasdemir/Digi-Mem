@@ -1,0 +1,132 @@
+@inject DigitalMemory.Services.ApiService ApiService
+@{
+    var currentUser = await ApiService.GetCurrentUserAsync();
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Dijital Hafıza</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="min-h-screen">
+    <nav class="border-b border-border bg-card sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-2 text-xl font-semibold text-foreground hover:text-primary transition-colors">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    <span>Dijital Hafıza</span>
+                </a>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="/Timeline" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Zaman Çizelgesi
+                    </a>
+                    <a href="/Summaries" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Özetler
+                    </a>
+                    <a href="/Settings" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        Ayarlar
+                    </a>
+                </div>
+
+                <!-- User Menu -->
+                <div class="relative">
+                    <button onclick="toggleUserMenu()" class="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors">
+                        @if (!string.IsNullOrEmpty(currentUser?.ProfilePictureUrl))
+                        {
+                            <img src="@currentUser.ProfilePictureUrl" alt="Profil" class="w-8 h-8 rounded-full object-cover" />
+                        }
+                        else
+                        {
+                            <div class="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                                @(currentUser?.Name?.Substring(0, 1).ToUpper() ?? "K")
+                            </div>
+                        }
+                        <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-56 bg-popover border border-border rounded-lg shadow-lg py-1">
+                        <div class="px-4 py-3 border-b border-border">
+                            <p class="text-sm font-medium text-foreground">@currentUser?.Name @currentUser?.Surname</p>
+                            <p class="text-xs text-muted-foreground">@currentUser?.Email</p>
+                        </div>
+                        <a href="/Settings" class="block px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors">
+                            Profil Ayarları
+                        </a>
+                        <form method="post" asp-page-handler="Logout" class="block">
+                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors">
+                                Çıkış Yap
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-accent transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="hidden md:hidden pb-4">
+                <div class="flex flex-col gap-2">
+                    <a href="/Timeline" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+                        Zaman Çizelgesi
+                    </a>
+                    <a href="/Summaries" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+                        Özetler
+                    </a>
+                    <a href="/Settings" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+                        Ayarlar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Include modals partial -->
+    @await Html.PartialAsync("_Modals")
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('userMenu');
+            const userButton = event.target.closest('button[onclick="toggleUserMenu()"]');
+            
+            if (!userButton && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

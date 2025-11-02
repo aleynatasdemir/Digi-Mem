@@ -1,0 +1,351 @@
+<!-- Photo Modal -->
+<div id="photoModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="modal.close('photoModal')"></div>
+        
+        <div class="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Fotoğraf Ekle</h2>
+                <button onclick="modal.close('photoModal')" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="photoForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Fotoğraf</label>
+                    <input type="file" accept="image/*" required
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Başlık</label>
+                    <input type="text" maxlength="120" placeholder="Fotoğrafa bir başlık verin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Açıklama</label>
+                    <textarea rows="3" placeholder="Fotoğraf hakkında notlar..."
+                              class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Tarih</label>
+                        <input type="date"
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Konum</label>
+                        <input type="text" placeholder="Konum ekle..."
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Etiketler</label>
+                    <input type="text" placeholder="Etiketleri virgülle ayırın..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Kaydet
+                    </button>
+                    <button type="button" onclick="modal.close('photoModal')" class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Video Modal -->
+<div id="videoModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="modal.close('videoModal')"></div>
+        
+        <div class="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Video Ekle</h2>
+                <button onclick="modal.close('videoModal')" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="videoForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Video</label>
+                    <input type="file" accept="video/*" required
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Başlık</label>
+                    <input type="text" maxlength="120" placeholder="Videoya bir başlık verin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Açıklama</label>
+                    <textarea rows="3" placeholder="Video hakkında notlar..."
+                              class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Tarih</label>
+                        <input type="date"
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Konum</label>
+                        <input type="text" placeholder="Konum ekle..."
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Kaydet
+                    </button>
+                    <button type="button" onclick="modal.close('videoModal')" class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Voice Modal -->
+<div id="voiceModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="modal.close('voiceModal')"></div>
+        
+        <div class="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Ses Kaydı Ekle</h2>
+                <button onclick="modal.close('voiceModal')" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="voiceForm" class="space-y-4">
+                <div class="flex flex-col items-center gap-4 p-6 bg-muted rounded-lg">
+                    <button type="button" id="recordButton" onclick="toggleRecording()" 
+                            class="w-20 h-20 rounded-full bg-orange-500 text-white flex items-center justify-center hover:bg-orange-600 transition-colors">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                    </button>
+                    <p class="text-sm text-muted-foreground">Kayda başlamak için tıklayın</p>
+                    <p id="recordingTime" class="text-2xl font-mono text-foreground">00:00</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Başlık</label>
+                    <input type="text" maxlength="120" placeholder="Ses kaydına bir başlık verin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Açıklama</label>
+                    <textarea rows="3" placeholder="Ses kaydı hakkında notlar..."
+                              class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Kaydet
+                    </button>
+                    <button type="button" onclick="modal.close('voiceModal')" class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Text Modal -->
+<div id="textModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="modal.close('textModal')"></div>
+        
+        <div class="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Metin Notu Ekle</h2>
+                <button onclick="modal.close('textModal')" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="textForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Başlık <span class="text-destructive">*</span></label>
+                    <input type="text" required maxlength="120" placeholder="Notunuza bir başlık verin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">İçerik <span class="text-destructive">*</span></label>
+                    <textarea required rows="8" placeholder="Düşüncelerinizi yazın..."
+                              class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Tarih</label>
+                        <input type="date"
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Etiketler</label>
+                        <input type="text" placeholder="Virgülle ayırın..."
+                               class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Kaydet
+                    </button>
+                    <button type="button" onclick="modal.close('textModal')" class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Song Modal -->
+<div id="songModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="modal.close('songModal')"></div>
+        
+        <div class="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-semibold text-foreground">Şarkı Ekle</h2>
+                <button onclick="modal.close('songModal')" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="songForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Şarkı Adı <span class="text-destructive">*</span></label>
+                    <input type="text" required placeholder="Şarkı adını girin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Sanatçı <span class="text-destructive">*</span></label>
+                    <input type="text" required placeholder="Sanatçı adını girin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Albüm</label>
+                    <input type="text" placeholder="Albüm adını girin..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Spotify URL</label>
+                    <input type="url" placeholder="https://open.spotify.com/track/..."
+                           class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Notlar</label>
+                    <textarea rows="3" placeholder="Bu şarkı hakkında notlar..."
+                              class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                        Kaydet
+                    </button>
+                    <button type="button" onclick="modal.close('songModal')" class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Voice recording functionality
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordingInterval;
+    let recordingSeconds = 0;
+    let isRecording = false;
+
+    function toggleRecording() {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            recordingSeconds = 0;
+
+            document.getElementById('recordButton').classList.add('animate-pulse', 'bg-red-500');
+            document.getElementById('recordButton').classList.remove('bg-orange-500');
+
+            recordingInterval = setInterval(() => {
+                recordingSeconds++;
+                const minutes = Math.floor(recordingSeconds / 60);
+                const seconds = recordingSeconds % 60;
+                document.getElementById('recordingTime').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            toast.error('Mikrofona erişim izni gerekli');
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            clearInterval(recordingInterval);
+
+            document.getElementById('recordButton').classList.remove('animate-pulse', 'bg-red-500');
+            document.getElementById('recordButton').classList.add('bg-orange-500');
+
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            toast.success('Kayıt tamamlandı');
+        }
+    }
+</script>

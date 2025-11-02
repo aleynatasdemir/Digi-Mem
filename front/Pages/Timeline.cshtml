@@ -1,0 +1,340 @@
+@page
+@model TimelineModel
+@{
+    ViewData["Title"] = "Zaman Çizelgesi";
+}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-foreground mb-2">Zaman Çizelgesi</h1>
+        <p class="text-muted-foreground">Anılarınızı kronolojik sırayla görüntüleyin</p>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-card border border-border rounded-lg p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="md:col-span-2">
+                <input type="text" 
+                       id="searchInput" 
+                       placeholder="Anılarda ara..." 
+                       class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                       oninput="handleSearch(this.value)" />
+            </div>
+
+            <!-- Type Filter -->
+            <div>
+                <select id="typeFilter" 
+                        onchange="handleFilterChange()" 
+                        class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                    <option value="">Tüm Tipler</option>
+                    <option value="photo">Fotoğraf</option>
+                    <option value="video">Video</option>
+                    <option value="voice">Ses Kaydı</option>
+                    <option value="text">Metin Notu</option>
+                    <option value="song">Şarkı</option>
+                </select>
+            </div>
+
+            <!-- View Mode -->
+            <div class="flex gap-2">
+                <button onclick="setViewMode('day')" 
+                        id="viewDay" 
+                        class="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground">
+                    Gün
+                </button>
+                <button onclick="setViewMode('week')" 
+                        id="viewWeek" 
+                        class="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                    Hafta
+                </button>
+                <button onclick="setViewMode('month')" 
+                        id="viewMonth" 
+                        class="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                    Ay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Content -->
+    <div id="timelineContent">
+        <!-- Loading State -->
+        <div id="loadingState" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12">
+            <div class="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
+                <svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-foreground mb-2">Henüz anı yok</h3>
+            <p class="text-muted-foreground mb-4">İlk anınızı ekleyerek başlayın</p>
+            <a href="/" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Anı Ekle
+            </a>
+        </div>
+
+        <!-- Timeline Items -->
+        <div id="timelineItems" class="space-y-8"></div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="hidden mt-8 flex items-center justify-between">
+        <button onclick="previousPage()" 
+                id="prevButton" 
+                class="px-4 py-2 text-sm font-medium text-foreground bg-secondary rounded-lg hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed">
+            Önceki
+        </button>
+        <span id="pageInfo" class="text-sm text-muted-foreground"></span>
+        <button onclick="nextPage()" 
+                id="nextButton" 
+                class="px-4 py-2 text-sm font-medium text-foreground bg-secondary rounded-lg hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed">
+            Sonraki
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let currentPage = 1;
+    let currentViewMode = 'day';
+    let currentSearch = '';
+    let currentType = '';
+    let totalPages = 1;
+
+    // Debounced search handler
+    const handleSearch = debounce((value) => {
+        currentSearch = value;
+        currentPage = 1;
+        loadMemories();
+    }, 400);
+
+    function handleFilterChange() {
+        currentType = document.getElementById('typeFilter').value;
+        currentPage = 1;
+        loadMemories();
+    }
+
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        
+        // Update button styles
+        ['day', 'week', 'month'].forEach(m => {
+            const btn = document.getElementById(`view${m.charAt(0).toUpperCase() + m.slice(1)}`);
+            if (m === mode) {
+                btn.className = 'flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground';
+            } else {
+                btn.className = 'flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80';
+            }
+        });
+        
+        loadMemories();
+    }
+
+    async function loadMemories() {
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const timelineItems = document.getElementById('timelineItems');
+        const pagination = document.getElementById('pagination');
+
+        loadingState.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        timelineItems.innerHTML = '';
+        pagination.classList.add('hidden');
+
+        try {
+            const params = new URLSearchParams({
+                page: currentPage,
+                pageSize: 20,
+                sortBy: 'createdAt',
+                sortOrder: 'desc'
+            });
+
+            if (currentSearch) params.append('search', currentSearch);
+            if (currentType) params.append('type', currentType);
+
+            const response = await fetch(`@Model.ApiBaseUrl/memories?${params}`);
+            const data = await response.json();
+
+            loadingState.classList.add('hidden');
+
+            if (!data.items || data.items.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            totalPages = Math.ceil(data.total / data.pageSize);
+            renderTimeline(data.items);
+            updatePagination();
+            pagination.classList.remove('hidden');
+
+        } catch (error) {
+            console.error('Error loading memories:', error);
+            loadingState.classList.add('hidden');
+            toast.error('Anılar yüklenirken bir hata oluştu');
+        }
+    }
+
+    function renderTimeline(memories) {
+        const timelineItems = document.getElementById('timelineItems');
+        const grouped = groupMemoriesByDate(memories);
+
+        let html = '';
+        for (const [dateKey, items] of Object.entries(grouped)) {
+            html += `
+                <div class="relative">
+                    <div class="sticky top-20 z-10 bg-background/80 backdrop-blur-sm py-2 mb-4">
+                        <h2 class="text-lg font-semibold text-foreground">${dateKey}</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${items.map(memory => renderMemoryCard(memory)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        timelineItems.innerHTML = html;
+    }
+
+    function groupMemoriesByDate(memories) {
+        const grouped = {};
+        
+        memories.forEach(memory => {
+            const date = new Date(memory.createdAt);
+            let key;
+
+            if (currentViewMode === 'day') {
+                key = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+            } else if (currentViewMode === 'week') {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                key = `${weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} Haftası`;
+            } else {
+                key = date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+            }
+
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(memory);
+        });
+
+        return grouped;
+    }
+
+    function renderMemoryCard(memory) {
+        const typeColors = {
+            photo: 'blue',
+            video: 'purple',
+            voice: 'orange',
+            text: 'green',
+            song: 'pink'
+        };
+        const color = typeColors[memory.type] || 'gray';
+        const typeLabels = {
+            photo: 'Fotoğraf',
+            video: 'Video',
+            voice: 'Ses Kaydı',
+            text: 'Metin Notu',
+            song: 'Şarkı'
+        };
+
+        return `
+            <div class="group relative rounded-lg border border-border bg-card overflow-hidden hover:shadow-lg transition-shadow">
+                ${renderMemoryPreview(memory)}
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-${color}-500/10 text-${color}-600 dark:text-${color}-400">
+                            ${typeLabels[memory.type]}
+                        </span>
+                        <span class="text-xs text-muted-foreground">${formatRelativeDate(memory.createdAt)}</span>
+                    </div>
+                    ${memory.title ? `<h3 class="font-semibold text-foreground mb-1 line-clamp-1">${memory.title}</h3>` : ''}
+                    ${memory.description ? `<p class="text-sm text-muted-foreground line-clamp-2">${memory.description}</p>` : ''}
+                    <div class="flex items-center gap-2 mt-3">
+                        <button onclick="viewMemory(${memory.id})" class="text-sm text-primary hover:underline">Görüntüle</button>
+                        <button onclick="editMemory(${memory.id})" class="text-sm text-primary hover:underline">Düzenle</button>
+                        <button onclick="deleteMemory(${memory.id})" class="text-sm text-destructive hover:underline">Sil</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderMemoryPreview(memory) {
+        if (memory.type === 'photo' && memory.photoVideo?.url) {
+            return `<img src="${memory.photoVideo.url}" alt="${memory.title || 'Fotoğraf'}" class="w-full h-48 object-cover" />`;
+        } else if (memory.type === 'video' && memory.photoVideo?.url) {
+            return `<video src="${memory.photoVideo.url}" class="w-full h-48 object-cover" controls></video>`;
+        } else if (memory.type === 'song' && memory.song?.coverUrl) {
+            return `<img src="${memory.song.coverUrl}" alt="${memory.song.title}" class="w-full h-48 object-cover" />`;
+        }
+        return `<div class="w-full h-48 bg-muted flex items-center justify-center">
+            <svg class="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+        </div>`;
+    }
+
+    function updatePagination() {
+        document.getElementById('pageInfo').textContent = `Sayfa ${currentPage} / ${totalPages}`;
+        document.getElementById('prevButton').disabled = currentPage === 1;
+        document.getElementById('nextButton').disabled = currentPage === totalPages;
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadMemories();
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadMemories();
+        }
+    }
+
+    async function deleteMemory(id) {
+        if (!confirm('Bu anıyı silmek istediğinizden emin misiniz?')) return;
+
+        try {
+            const response = await fetch(`@Model.ApiBaseUrl/memories/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                toast.success('Anı silindi');
+                loadMemories();
+            } else {
+                toast.error('Anı silinirken bir hata oluştu');
+            }
+        } catch (error) {
+            console.error('Error deleting memory:', error);
+            toast.error('Anı silinirken bir hata oluştu');
+        }
+    }
+
+    function viewMemory(id) {
+        // TODO: Implement view modal
+        toast.info('Görüntüleme özelliği yakında eklenecek');
+    }
+
+    function editMemory(id) {
+        // TODO: Implement edit modal
+        toast.info('Düzenleme özelliği yakında eklenecek');
+    }
+
+    // Load memories on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMemories();
+    });
+</script>
+}

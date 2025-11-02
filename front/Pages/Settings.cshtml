@@ -1,0 +1,280 @@
+@page
+@model SettingsModel
+@{
+    ViewData["Title"] = "Ayarlar";
+}
+
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-foreground mb-2">Ayarlar</h1>
+        <p class="text-muted-foreground">Profil bilgilerinizi ve tercihlerinizi yönetin</p>
+    </div>
+
+    <!-- Profile Settings -->
+    <div class="rounded-lg border border-border bg-card p-6 mb-6">
+        <h2 class="text-xl font-semibold text-foreground mb-6">Profil Bilgileri</h2>
+        
+        <form id="profileForm" class="space-y-6">
+            <!-- Profile Picture -->
+            <div class="flex items-center gap-6">
+                <div class="relative">
+                    <img id="profilePicture" 
+                         src="/placeholder.svg?height=96&width=96" 
+                         alt="Profil Resmi" 
+                         class="w-24 h-24 rounded-full object-cover border-2 border-border" />
+                    <button type="button" 
+                            onclick="document.getElementById('profilePictureInput').click()" 
+                            class="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        </svg>
+                    </button>
+                    <input type="file" 
+                           id="profilePictureInput" 
+                           accept="image/*" 
+                           class="hidden" 
+                           onchange="handleProfilePictureChange(event)" />
+                </div>
+                <div>
+                    <h3 class="font-medium text-foreground mb-1">Profil Resmi</h3>
+                    <p class="text-sm text-muted-foreground mb-2">JPG, PNG veya GIF formatında, maksimum 5MB</p>
+                    <button type="button" 
+                            onclick="document.getElementById('profilePictureInput').click()" 
+                            class="text-sm text-primary hover:underline">
+                        Resmi Değiştir
+                    </button>
+                </div>
+            </div>
+
+            <!-- Name -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-foreground mb-2">
+                    Ad
+                </label>
+                <input type="text" 
+                       id="name" 
+                       name="name" 
+                       required
+                       class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+
+            <!-- Surname -->
+            <div>
+                <label for="surname" class="block text-sm font-medium text-foreground mb-2">
+                    Soyad
+                </label>
+                <input type="text" 
+                       id="surname" 
+                       name="surname" 
+                       required
+                       class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-foreground mb-2">
+                    E-posta
+                </label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       required
+                       class="w-full px-4 py-2 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex items-center gap-3">
+                <button type="submit" 
+                        class="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                    Değişiklikleri Kaydet
+                </button>
+                <button type="button" 
+                        onclick="loadUserData()" 
+                        class="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium">
+                    İptal
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Integrations -->
+    <div class="rounded-lg border border-border bg-card p-6 mb-6">
+        <h2 class="text-xl font-semibold text-foreground mb-6">Entegrasyonlar</h2>
+        
+        <div class="space-y-4">
+            <!-- Spotify -->
+            <div class="flex items-center justify-between p-4 rounded-lg border border-border">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-foreground">Spotify</h3>
+                        <p class="text-sm text-muted-foreground">Dinlediğiniz şarkıları otomatik ekleyin</p>
+                    </div>
+                </div>
+                <button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                    Bağlan
+                </button>
+            </div>
+
+            <!-- Last.fm -->
+            <div class="flex items-center justify-between p-4 rounded-lg border border-border">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M10.584 17.21l-.88-2.392s-1.43 1.594-3.573 1.594c-1.897 0-3.244-1.649-3.244-4.288 0-3.382 1.704-4.591 3.381-4.591 2.419 0 3.188 1.567 3.849 3.574l.88 2.75c.88 2.728 2.529 4.924 7.284 4.924 3.42 0 5.733-1.044 5.733-3.79 0-2.227-1.265-3.381-3.63-3.931l-1.758-.385c-1.21-.275-1.567-.77-1.567-1.595 0-.934.742-1.484 1.952-1.484 1.32 0 2.034.495 2.144 1.677l2.749-.33c-.22-2.474-1.924-3.492-4.729-3.492-2.474 0-4.893.935-4.893 3.931 0 1.87.907 3.052 3.188 3.547l1.869.413c1.402.33 1.869.907 1.869 1.704 0 1.017-.99 1.43-2.86 1.43-2.776 0-3.93-1.457-4.591-3.464l-.907-2.75c-1.155-3.574-2.997-4.893-6.653-4.893C2.144 5.333 0 7.89 0 12.233c0 4.18 2.144 6.434 5.993 6.434 3.107 0 4.591-1.457 4.591-1.457z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-foreground">Last.fm</h3>
+                        <p class="text-sm text-muted-foreground">Müzik dinleme geçmişinizi senkronize edin</p>
+                    </div>
+                </div>
+                <button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                    Bağlan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="rounded-lg border border-destructive/50 bg-destructive/5 p-6">
+        <h2 class="text-xl font-semibold text-destructive mb-4">Tehlikeli Bölge</h2>
+        
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-medium text-foreground mb-1">Hesaptan Çıkış Yap</h3>
+                    <p class="text-sm text-muted-foreground">Mevcut oturumunuzu sonlandırın</p>
+                </div>
+                <form method="post" asp-page-handler="Logout">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors text-sm font-medium">
+                        Çıkış Yap
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-destructive/20">
+                <div>
+                    <h3 class="font-medium text-foreground mb-1">Hesabı Sil</h3>
+                    <p class="text-sm text-muted-foreground">Hesabınızı ve tüm verilerinizi kalıcı olarak silin</p>
+                </div>
+                <button type="button" 
+                        onclick="confirmDeleteAccount()" 
+                        class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors text-sm font-medium">
+                    Hesabı Sil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let currentUser = null;
+
+    async function loadUserData() {
+        try {
+            const response = await fetch(`@Model.ApiBaseUrl/user/me`);
+            currentUser = await response.json();
+
+            document.getElementById('name').value = currentUser.name || '';
+            document.getElementById('surname').value = currentUser.surname || '';
+            document.getElementById('email').value = currentUser.email || '';
+            
+            if (currentUser.profilePictureUrl) {
+                document.getElementById('profilePicture').src = currentUser.profilePictureUrl;
+            }
+        } catch (error) {
+            console.error('Error loading user data:', error);
+            toast.error('Kullanıcı bilgileri yüklenirken bir hata oluştu');
+        }
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            name: document.getElementById('name').value,
+            surname: document.getElementById('surname').value,
+            email: document.getElementById('email').value,
+            profilePictureUrl: currentUser?.profilePictureUrl
+        };
+
+        try {
+            const response = await fetch(`@Model.ApiBaseUrl/user/me`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                toast.success('Profil bilgileri güncellendi');
+                loadUserData();
+            } else {
+                toast.error('Profil güncellenirken bir hata oluştu');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            toast.error('Profil güncellenirken bir hata oluştu');
+        }
+    });
+
+    function handleProfilePictureChange(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('profilePicture').src = e.target.result;
+            // TODO: Upload to server
+            toast.info('Profil resmi yükleme özelliği yakında eklenecek');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function confirmDeleteAccount() {
+        if (confirm('Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz kalıcı olarak silinecektir.')) {
+            if (confirm('Son kez soruyoruz: Hesabınızı ve tüm anılarınızı kalıcı olarak silmek istediğinizden emin misiniz?')) {
+                deleteAccount();
+            }
+        }
+    }
+
+    async function deleteAccount() {
+        try {
+            const response = await fetch(`@Model.ApiBaseUrl/user/me`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                toast.success('Hesabınız silindi');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                toast.error('Hesap silinirken bir hata oluştu');
+            }
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            toast.error('Hesap silinirken bir hata oluştu');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUserData();
+    });
+</script>
+}

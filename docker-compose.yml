@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: digimem-postgres
+    environment:
+      POSTGRES_DB: digimem
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d digimem"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - digimem-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: digimem-web
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=digimem;Username=app;Password=app_pass
+      - ADMIN_EMAIL=admin@local
+      - ADMIN_PASSWORD=Admin!12345
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - digimem-network
+
+volumes:
+  postgres_data:
+
+networks:
+  digimem-network:
+    driver: bridge
