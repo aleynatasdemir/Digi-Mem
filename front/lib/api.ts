@@ -10,7 +10,7 @@ import type {
   SummaryGranularity,
 } from "./types"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5299/api"
 
 export interface ApiError {
   error: string
@@ -19,10 +19,13 @@ export interface ApiError {
 
 class ApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options?.headers,
       },
       credentials: "include", // Cookie-based auth

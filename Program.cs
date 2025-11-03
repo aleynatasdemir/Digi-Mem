@@ -63,6 +63,23 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Session for OAuth state management
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(10);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
+
+// Services
+builder.Services.AddSingleton<DigiMem.Services.IEncryptionService, DigiMem.Services.EncryptionService>();
+builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifyOAuthService, DigiMem.Services.Spotify.SpotifyOAuthService>();
+builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifyApiService, DigiMem.Services.Spotify.SpotifyApiService>();
+builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifySyncService, DigiMem.Services.Spotify.SpotifySyncService>();
+
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -86,6 +103,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

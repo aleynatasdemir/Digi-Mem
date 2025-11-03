@@ -1,0 +1,200 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using DigiMem.Data;
+using DigiMem.Models;
+using System.Security.Claims;
+
+namespace DigiMem.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class MemoriesController : ControllerBase
+{
+    private readonly AppDbContext _context;
+
+    public MemoriesController(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    private string GetUserId()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException();
+    }
+
+    // GET: api/memories
+    [HttpGet]
+    public async Task<ActionResult<object>> GetMemories(
+        [FromQuery] string? view = null,
+        [FromQuery] string? from = null,
+        [FromQuery] string? to = null,
+        [FromQuery] string? types = null,
+        [FromQuery] string? tags = null,
+        [FromQuery] string? q = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var userId = GetUserId();
+        var query = _context.Memories.Where(m => m.UserId == userId);
+
+        // Filter by date range
+        if (!string.IsNullOrEmpty(from) && DateTime.TryParse(from, out var fromDate))
+        {
+            query = query.Where(m => m.CreatedAt >= fromDate);
+        }
+
+        if (!string.IsNullOrEmpty(to) && DateTime.TryParse(to, out var toDate))
+        {
+            query = query.Where(m => m.CreatedAt <= toDate);
+        }
+
+        // Filter by types
+        if (!string.IsNullOrEmpty(types))
+        {
+            var typeList = types.Split(',').Select(t => t.Trim()).ToList();
+            query = query.Where(m => typeList.Contains(m.Type));
+        }
+
+        // Search query
+        if (!string.IsNullOrEmpty(q))
+        {
+            query = query.Where(m => 
+                (m.Title != null && m.Title.Contains(q)) || 
+                (m.Description != null && m.Description.Contains(q)));
+        }
+
+        var total = await query.CountAsync();
+        var memories = await query
+            .OrderByDescending(m => m.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            items = memories,
+            total,
+            page,
+            pageSize,
+            totalPages = (int)Math.Ceiling((double)total / pageSize)
+        });
+    }
+
+    // GET: api/memories/{id}
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Memory>> GetMemory(int id)
+    {
+        var userId = GetUserId();
+        var memory = await _context.Memories
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+
+        if (memory == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(memory);
+    }
+
+    // POST: api/memories
+    [HttpPost]
+    public async Task<ActionResult<Memory>> CreateMemory([FromBody] CreateMemoryRequest request)
+    {
+        var userId = GetUserId();
+
+        var memory = new Memory
+        {
+            Type = request.Type,
+            Title = request.Title,
+            Description = request.Description,
+            Tags = request.Tags,
+            FileUrl = request.FileUrl,
+            ThumbnailUrl = request.ThumbnailUrl,
+            MimeType = request.MimeType,
+            FileSize = request.FileSize,
+            DurationSeconds = request.DurationSeconds,
+            TranscriptionText = request.TranscriptionText,
+            SpotifyTrackId = request.SpotifyTrackId,
+            SongTitle = request.SongTitle,
+            ArtistName = request.ArtistName,
+            AlbumName = request.AlbumName,
+            AlbumArtUrl = request.AlbumArtUrl,
+            UserId = userId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Memories.Add(memory);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetMemory), new { id = memory.Id }, memory);
+    }
+
+    // PUT: api/memories/{id}
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateMemory(int id, [FromBody] UpdateMemoryRequest request)
+    {
+        var userId = GetUserId();
+        var memory = await _context.Memories
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+
+        if (memory == null)
+        {
+            return NotFound();
+        }
+
+        memory.Title = request.Title;
+        memory.Description = request.Description;
+        memory.Tags = request.Tags;
+        memory.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(memory);
+    }
+
+    // DELETE: api/memories/{id}
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMemory(int id)
+    {
+        var userId = GetUserId();
+        var memory = await _context.Memories
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+
+        if (memory == null)
+        {
+            return NotFound();
+        }
+
+        _context.Memories.Remove(memory);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+}
+
+public record CreateMemoryRequest(
+    string Type,
+    string? Title,
+    string? Description,
+    List<string>? Tags,
+    string? FileUrl,
+    string? ThumbnailUrl,
+    string? MimeType,
+    long? FileSize,
+    int? DurationSeconds,
+    string? TranscriptionText,
+    string? SpotifyTrackId,
+    string? SongTitle,
+    string? ArtistName,
+    string? AlbumName,
+    string? AlbumArtUrl
+);
+
+public record UpdateMemoryRequest(
+    string? Title,
+    string? Description,
+    List<string>? Tags
+);
