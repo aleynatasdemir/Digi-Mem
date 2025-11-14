@@ -402,3 +402,71 @@ FodyWeavers.xsd
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.production.local
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Next.js specific
+.next/
+out/
+next-env.d.ts
+
+# Frontend dependencies and build
+frontv2/node_modules/
+frontv2/.next/
+frontv2/out/
+frontv2/.turbo/
+frontv2/dist/
+
+# Old frontend (if not needed)
+front/node_modules/
+front/.next/
+front/out/
+front/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# Configuration files with secrets (uncomment if needed)
+appsettings.Development.json
+appsettings.Production.json
+
+# Docker volumes
+data/
+postgres-data/
+
+# User uploads
+uploads/
+wwwroot/uploads/
+
+# Package lock files (optional - uncomment if you want only one lock file)
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
