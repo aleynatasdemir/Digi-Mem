@@ -7,14 +7,13 @@ namespace DigiMem.Data
 {
     public class ApplicationUser : IdentityUser
     {
-        public ICollection<Entry> Entries { get; set; } = new List<Entry>();
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Entry> Entries { get; set; }
         public DbSet<Memory> Memories { get; set; }
         public DbSet<UserIntegration> UserIntegrations { get; set; }
         public DbSet<SpotifyTrack> SpotifyTracks { get; set; }
@@ -22,12 +21,6 @@ namespace DigiMem.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
-            builder.Entity<Entry>()
-                .HasOne<ApplicationUser>(e => e.User!)
-                .WithMany(u => u.Entries)
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Memory>()
                 .HasOne<ApplicationUser>(m => m.User!)

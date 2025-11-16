@@ -173,6 +173,90 @@ public class MemoriesController : ControllerBase
 
         return NoContent();
     }
+
+    // GET: api/memories/stats
+    [HttpGet("stats")]
+    public async Task<ActionResult<object>> GetStats([FromQuery] string? period = "all")
+    {
+        var userId = GetUserId();
+        var now = DateTime.UtcNow;
+
+        // Calculate date ranges
+        var startOfToday = now.Date;
+        var startOfWeek = now.AddDays(-(int)now.DayOfWeek);
+        var startOfMonth = new DateTime(now.Year, now.Month, 1);
+        var startOfYear = new DateTime(now.Year, 1, 1);
+
+        var query = _context.Memories.Where(m => m.UserId == userId);
+
+        // Total counts
+        var totalMemories = await query.CountAsync();
+        var todayMemories = await query.CountAsync(m => m.CreatedAt >= startOfToday);
+        var weekMemories = await query.CountAsync(m => m.CreatedAt >= startOfWeek);
+        var monthMemories = await query.CountAsync(m => m.CreatedAt >= startOfMonth);
+        var yearMemories = await query.CountAsync(m => m.CreatedAt >= startOfYear);
+
+        // Format distribution
+        var formatDistribution = await query
+            .GroupBy(m => m.Type)
+            .Select(g => new { type = g.Key, count = g.Count() })
+            .ToListAsync();
+
+        // Weekly data (last 7 days)
+        var weeklyData = new List<object>();
+        for (int i = 6; i >= 0; i--)
+        {
+            var date = now.AddDays(-i).Date;
+            var count = await query.CountAsync(m => m.CreatedAt.Date == date);
+            weeklyData.Add(new
+            {
+                date = date.ToString("yyyy-MM-dd"),
+                day = date.ToString("ddd", new System.Globalization.CultureInfo("tr-TR")),
+                count
+            });
+        }
+
+        // Monthly trend (last 4 weeks)
+        var monthlyTrend = new List<object>();
+        for (int i = 3; i >= 0; i--)
+        {
+            var weekStart = now.AddDays(-7 * (i + 1));
+            var weekEnd = now.AddDays(-7 * i);
+            var count = await query.CountAsync(m => m.CreatedAt >= weekStart && m.CreatedAt < weekEnd);
+            monthlyTrend.Add(new
+            {
+                week = $"{i + 1}. Hafta",
+                count
+            });
+        }
+
+        // Averages
+        var totalDays = (now - (await query.OrderBy(m => m.CreatedAt).Select(m => m.CreatedAt).FirstOrDefaultAsync())).Days;
+        var dailyAverage = totalDays > 0 ? (double)totalMemories / totalDays : 0;
+        var weeklyAverage = totalDays >= 7 ? (double)totalMemories / (totalDays / 7.0) : weekMemories;
+        var monthlyAverage = totalDays >= 30 ? (double)totalMemories / (totalDays / 30.0) : monthMemories;
+
+        return Ok(new
+        {
+            totals = new
+            {
+                all = totalMemories,
+                today = todayMemories,
+                week = weekMemories,
+                month = monthMemories,
+                year = yearMemories
+            },
+            averages = new
+            {
+                daily = Math.Round(dailyAverage, 1),
+                weekly = Math.Round(weeklyAverage, 1),
+                monthly = Math.Round(monthlyAverage, 1)
+            },
+            formatDistribution,
+            weeklyData,
+            monthlyTrend
+        });
+    }
 }
 
 public record CreateMemoryRequest(
