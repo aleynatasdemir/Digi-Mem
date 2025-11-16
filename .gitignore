@@ -465,8 +465,72 @@ postgres-data/
 # User uploads
 uploads/
 wwwroot/uploads/
+backend/wwwroot/uploads/
+
+# Flutter/Dart specific
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/flutter_*.png
+mobile/linked_*.ds
+mobile/unlinked.ds
+mobile/unlinked_spec.ds
+
+# iOS specific
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/app.flx
+mobile/ios/Flutter/app.zip
+mobile/ios/ServiceDefinitions.json
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+
+# Android specific
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
+mobile/android/.gradle/
+mobile/android/gradle/
+mobile/android/gradlew
+mobile/android/gradlew.bat
+mobile/android/local.properties
+mobile/android/**/GeneratedPluginRegistrant.java
+mobile/android/key.properties
+mobile/android/.idea/
+mobile/android/captures/
+mobile/android/.externalNativeBuild/
+
+# Web specific
+mobile/web/.dart_tool/
+
+# macOS specific
+mobile/macos/Flutter/ephemeral/
+mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Linux specific
+mobile/linux/flutter/ephemeral/
+
+# Windows specific
+mobile/windows/flutter/ephemeral/
+
+# Coverage
+mobile/coverage/
+
+# Exceptions to above rules
+!mobile/android/gradle-wrapper.jar
 
 # Package lock files (optional - uncomment if you want only one lock file)
 # package-lock.json
 # pnpm-lock.yaml
 # yarn.lock
+
+# Temporary test files
+token.txt

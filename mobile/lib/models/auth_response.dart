@@ -1,0 +1,27 @@
+class AuthResponse {
+  final String token;
+  final String userId;
+  final String email;
+
+  AuthResponse({
+    required this.token,
+    required this.userId,
+    required this.email,
+  });
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    return AuthResponse(
+      token: json['token'] ?? '',
+      userId: json['userId'] ?? '',
+      email: json['email'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'token': token,
+      'userId': userId,
+      'email': email,
+    };
+  }
+}

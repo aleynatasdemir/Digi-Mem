@@ -51,12 +51,14 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS - Frontend için
+// CORS - Frontend ve Flutter Web için
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:8080")
+        policy.SetIsOriginAllowed(origin => 
+            origin.StartsWith("http://localhost") || 
+            origin.StartsWith("http://127.0.0.1"))
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
