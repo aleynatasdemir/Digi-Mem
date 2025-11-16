@@ -8,6 +8,7 @@ public class Memory
     public required string Type { get; set; } // "photo", "video", "voice", "text", "song"
     public string? Title { get; set; }
     public string? Description { get; set; }
+    public DateTime? MemoryDate { get; set; } // User-selected date for the memory
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public List<string>? Tags { get; set; }

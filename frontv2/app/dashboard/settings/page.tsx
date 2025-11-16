@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Brain, Box, FileText, Settings, User, Mail, Calendar, LogOut, Edit2, Save, X } from 'lucide-react'
+import { useRouter } from "next/navigation"
+import { Brain, Box, FileText, Settings, User, Mail, Calendar, LogOut, Edit2, Save, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,27 +11,72 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useToast } from '@/hooks/use-toast'
+import { apiService } from '@/lib/api'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5299'
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [userData, setUserData] = useState({
-    name: "Kullanıcı Adı",
-    email: "kullanici@example.com",
-    memberSince: "2025-01-15",
+    id: "",
+    name: "",
+    email: "",
+    memberSince: "",
     avatarUrl: ""
   })
   const [editData, setEditData] = useState(userData)
+  const [stats, setStats] = useState({
+    total: 0,
+    thisMonth: 0,
+    thisWeek: 0
+  })
+
+  useEffect(() => {
+    loadUserData()
+    loadStats()
+  }, [])
+
+  const loadUserData = async () => {
+    try {
+      const user = await apiService.getCurrentUser()
+      const userData = {
+        id: user.id,
+        name: user.name || user.email,
+        email: user.email,
+        memberSince: user.createdAt,
+        avatarUrl: user.profilePhotoUrl || ""
+      }
+      setUserData(userData)
+      setEditData(userData)
+    } catch (error) {
+      console.error('Failed to load user data:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Hata',
+        description: 'Kullanıcı bilgileri yüklenemedi.',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadStats = async () => {
+    try {
+      const stats = await apiService.getStats()
+      setStats({
+        total: stats.totalMemories,
+        thisMonth: stats.thisMonth,
+        thisWeek: stats.thisWeek
+      })
+    } catch (error) {
+      console.error('Failed to load stats:', error)
+    }
+  }
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -42,16 +88,86 @@ export default function SettingsPage() {
     setEditData(userData)
   }
 
-  const handleSave = () => {
-    setUserData(editData)
-    setIsEditing(false)
-    // API call buraya gelecek
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      console.log('Updating profile with:', { name: editData.name, email: editData.email })
+      
+      const response = await apiService.updateProfile({
+        name: editData.name,
+        email: editData.email
+      })
+      
+      console.log('Profile update response:', response)
+      
+      // Backend'den gelen güncel bilgileri kullan
+      const updatedUserData = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        memberSince: userData.memberSince,
+        avatarUrl: userData.avatarUrl
+      }
+      
+      setUserData(updatedUserData)
+      setEditData(updatedUserData)
+      setIsEditing(false)
+      
+      toast({
+        title: 'Başarılı',
+        description: 'Profil bilgileriniz güncellendi.',
+      })
+      
+      // Sayfayı yenile ki güncel bilgiler yüklensin
+      await loadUserData()
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Hata',
+        description: 'Profil güncellenirken bir hata oluştu.',
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleLogout = () => {
-    // Logout logic buraya gelecek
-    console.log('Çıkış yapılıyor...')
-    setShowLogoutDialog(false)
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`${API_URL}/api/user/profile-photo`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (!response.ok) throw new Error('Upload failed')
+
+      const data = await response.json()
+      
+      setUserData({ ...userData, avatarUrl: data.profilePhotoUrl })
+      setEditData({ ...editData, avatarUrl: data.profilePhotoUrl })
+      
+      toast({
+        title: 'Başarılı',
+        description: 'Profil fotoğrafınız güncellendi.',
+      })
+    } catch (error) {
+      console.error('Failed to upload photo:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Hata',
+        description: 'Fotoğraf yüklenirken bir hata oluştu.',
+      })
+    }
   }
 
   const getInitials = (name: string) => {
@@ -133,8 +249,8 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={userData.avatarUrl} />
-                  <AvatarFallback className="text-2xl">{getInitials(userData.name)}</AvatarFallback>
+                  <AvatarImage src={userData.avatarUrl ? `${API_URL}${userData.avatarUrl}` : undefined} />
+                  <AvatarFallback className="text-2xl">{getInitials(userData.name || 'U')}</AvatarFallback>
                 </Avatar>
                 {isEditing && (
                   <div className="space-y-2">
@@ -146,6 +262,7 @@ export default function SettingsPage() {
                       type="file"
                       accept="image/*"
                       className="w-64"
+                      onChange={handlePhotoUpload}
                     />
                   </div>
                 )}
@@ -212,11 +329,20 @@ export default function SettingsPage() {
               {/* Action Buttons */}
               {isEditing && (
                 <div className="flex gap-3 pt-4">
-                  <Button onClick={handleSave} className="gap-2 flex-1">
-                    <Save className="h-4 w-4" />
-                    Kaydet
+                  <Button onClick={handleSave} className="gap-2 flex-1" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Kaydediliyor...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Kaydet
+                      </>
+                    )}
                   </Button>
-                  <Button onClick={handleCancel} variant="outline" className="gap-2 flex-1">
+                  <Button onClick={handleCancel} variant="outline" className="gap-2 flex-1" disabled={isSaving}>
                     <X className="h-4 w-4" />
                     İptal
                   </Button>
@@ -233,7 +359,10 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button
-                onClick={() => setShowLogoutDialog(true)}
+                onClick={() => {
+                  localStorage.removeItem('token')
+                  window.location.href = '/login'
+                }}
                 variant="destructive"
                 className="w-full gap-2"
                 size="lg"
@@ -251,42 +380,31 @@ export default function SettingsPage() {
               <CardDescription>Hesap aktivite özeti</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Toplam Anı</p>
-                  <p className="text-3xl font-bold">127</p>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Bu Ay</p>
-                  <p className="text-3xl font-bold">23</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Toplam Anı</p>
+                    <p className="text-3xl font-bold">{stats.total}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Bu Ay</p>
+                    <p className="text-3xl font-bold">{stats.thisMonth}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Bu Hafta</p>
+                    <p className="text-3xl font-bold">{stats.thisWeek}</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Bu Hafta</p>
-                  <p className="text-3xl font-bold">8</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </main>
 
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Çıkış yapmak istediğinize emin misiniz?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Oturumunuz sonlandırılacak ve giriş sayfasına yönlendirileceksiniz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Çıkış Yap
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

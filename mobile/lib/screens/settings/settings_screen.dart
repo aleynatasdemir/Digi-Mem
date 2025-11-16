@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/memory_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -8,9 +11,95 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final _apiService = ApiService();
+  final _authService = AuthService();
+  final _memoryService = MemoryService();
+  
   bool _isEditing = false;
-  final _nameController = TextEditingController(text: 'Kullanıcı Adı');
-  final _emailController = TextEditingController(text: 'kullanici@example.com');
+  bool _isLoading = true;
+  bool _isSaving = false;
+  
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  
+  String? _userId;
+  String? _memberSince;
+  int _totalMemories = 0;
+  int _thisMonth = 0;
+  int _thisWeek = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final response = await _apiService.get('/api/user/profile');
+      final userData = _apiService.parseResponse(response);
+      
+      final stats = await _memoryService.getStats();
+      
+      setState(() {
+        _userId = userData['id'];
+        _nameController.text = userData['userName'] ?? userData['email'];
+        _emailController.text = userData['email'];
+        _memberSince = userData['createdAt'];
+        _totalMemories = stats.totals['all'] ?? 0;
+        _thisMonth = stats.totals['month'] ?? 0;
+        _thisWeek = stats.totals['week'] ?? 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil yüklenirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _isSaving = true);
+    
+    try {
+      await _apiService.put('/api/user/profile', {
+        'userName': _nameController.text,
+        'email': _emailController.text,
+      });
+      
+      setState(() {
+        _isEditing = false;
+        _isSaving = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil güncellendi'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil güncellenirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -19,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  void _handleLogout() {
+  void _handleLogout() async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -31,9 +120,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('İptal'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/login');
+            onPressed: () async {
+              await _authService.logout();
+              if (mounted) {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
@@ -48,6 +140,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Ayarlar'),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -107,7 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'KA',
+                            _getInitials(_nameController.text),
                             style: theme.textTheme.headlineLarge?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
@@ -245,7 +350,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         border: Border.all(color: theme.dividerColor),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text('15 Ocak 2025'),
+                      child: Text(_memberSince != null 
+                          ? DateTime.parse(_memberSince!).toLocal().toString().split(' ')[0]
+                          : '-'),
                     ),
 
                     // Action Buttons
@@ -255,17 +362,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed: () {
-                                setState(() => _isEditing = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Profil güncellendi'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.save, size: 18),
-                              label: const Text('Kaydet'),
+                              onPressed: _isSaving ? null : _saveProfile,
+                              icon: _isSaving 
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.save, size: 18),
+                              label: Text(_isSaving ? 'Kaydediliyor...' : 'Kaydet'),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
@@ -326,17 +431,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _buildStatItem(
                           context,
                           label: 'Toplam Anı',
-                          value: '127',
+                          value: _totalMemories.toString(),
                         ),
                         _buildStatItem(
                           context,
                           label: 'Bu Ay',
-                          value: '23',
+                          value: _thisMonth.toString(),
                         ),
                         _buildStatItem(
                           context,
                           label: 'Bu Hafta',
-                          value: '8',
+                          value: _thisWeek.toString(),
                         ),
                       ],
                     ),
@@ -388,5 +493,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 }

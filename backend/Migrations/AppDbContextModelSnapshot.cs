@@ -45,6 +45,9 @@ namespace DigiMem.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -67,6 +70,9 @@ namespace DigiMem.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ProfilePhotoUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -121,6 +127,9 @@ namespace DigiMem.Migrations
 
                     b.Property<string>("FileUrl")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("MemoryDate")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("MimeType")
                         .HasColumnType("text");

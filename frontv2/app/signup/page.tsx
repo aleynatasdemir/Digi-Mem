@@ -1,10 +1,87 @@
+'use client'
+
+import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import { Brain } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Brain, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiService, ApiError } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 export default function SignUpPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  })
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    
+    // Şifre kontrolü
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Şifreler eşleşmiyor',
+        description: 'Lütfen şifrelerin aynı olduğundan emin olun.',
+      })
+      return
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Şifre çok kısa',
+        description: 'Şifreniz en az 6 karakter olmalıdır.',
+      })
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const response = await apiService.register({
+        email: formData.email,
+        password: formData.password
+      })
+      
+      toast({
+        title: 'Kayıt başarılı',
+        description: 'Hesabınız oluşturuldu. Şimdi giriş yapabilirsiniz.',
+      })
+
+      // Token'ı sil çünkü kullanıcı login yapmalı
+      localStorage.removeItem('token')
+      
+      router.push('/login')
+    } catch (error) {
+      console.error('Register error:', error)
+      
+      if (error instanceof ApiError) {
+        toast({
+          variant: 'destructive',
+          title: 'Kayıt başarısız',
+          description: error.status === 400 
+            ? 'Bu e-posta adresi zaten kullanılıyor' 
+            : 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        })
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Bağlantı hatası',
+          description: 'Sunucuya bağlanılamadı. Lütfen tekrar deneyin.',
+        })
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto flex min-h-screen flex-col items-center justify-center px-4 py-12">
@@ -30,7 +107,7 @@ export default function SignUpPage() {
                 </p>
               </div>
 
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Ad Soyad</Label>
                   <Input
@@ -38,6 +115,9 @@ export default function SignUpPage() {
                     type="text"
                     placeholder="Adınız Soyadınız"
                     className="h-11"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -49,6 +129,9 @@ export default function SignUpPage() {
                     type="email"
                     placeholder="ornek@email.com"
                     className="h-11"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -58,8 +141,11 @@ export default function SignUpPage() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="En az 8 karakter"
+                    placeholder="En az 6 karakter"
                     className="h-11"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -71,6 +157,9 @@ export default function SignUpPage() {
                     type="password"
                     placeholder="Şifrenizi tekrar girin"
                     className="h-11"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -87,8 +176,19 @@ export default function SignUpPage() {
                   {''}'nı kabul etmiş olursunuz.
                 </div>
 
-                <Button type="submit" className="w-full h-11 text-base font-medium">
-                  Hesap Oluştur
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Hesap oluşturuluyor...
+                    </>
+                  ) : (
+                    'Hesap Oluştur'
+                  )}
                 </Button>
               </form>
 

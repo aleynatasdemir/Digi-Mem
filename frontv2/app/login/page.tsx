@@ -1,10 +1,70 @@
+'use client'
+
+import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import { Brain } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Brain, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiService, ApiError } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      const response = await apiService.login({ email, password })
+      
+      // Admin kontrolü - aleyna@admin veya admin@local ise admin paneline yönlendir
+      const isAdmin = email === 'aleyna@admin' || email === 'admin@local'
+      
+      if (isAdmin) {
+        toast({
+          title: 'Admin girişi başarılı',
+          description: `Hoş geldiniz, ${response.user.name}!`,
+        })
+        
+        router.push('/admin/dashboard')
+      } else {
+        toast({
+          title: 'Giriş başarılı',
+          description: `Hoş geldiniz, ${response.user.name}!`,
+        })
+
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      
+      if (error instanceof ApiError) {
+        toast({
+          variant: 'destructive',
+          title: 'Giriş başarısız',
+          description: error.status === 401 
+            ? 'E-posta veya şifre hatalı' 
+            : 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        })
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Bağlantı hatası',
+          description: 'Sunucuya bağlanılamadı. Lütfen tekrar deneyin.',
+        })
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto flex min-h-screen flex-col items-center justify-center px-4">
@@ -30,15 +90,18 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-posta</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="ornek@email.com"
+                    placeholder="admin@local"
                     className="h-11"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -57,12 +120,26 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••••"
                     className="h-11"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
-                <Button asChild className="w-full h-11 text-base font-medium">
-                  <Link href="/dashboard">Giriş Yap</Link>
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 text-base font-medium"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Giriş yapılıyor...
+                    </>
+                  ) : (
+                    'Giriş Yap'
+                  )}
                 </Button>
               </form>
 

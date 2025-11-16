@@ -1,37 +1,124 @@
 'use client'
 
-import { useState } from 'react'
-import { Brain, Box, FileText, Settings, Image, Music, Mic, Type, Video, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Brain, Box, FileText, Settings, Image, Music, Mic, Type, Video, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { SettingsModal } from '@/components/settings-modal'
+import { apiService } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 type MediaType = 'photo' | 'audio' | 'text' | 'music' | 'video' | null
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [selectedMedia, setSelectedMedia] = useState<MediaType>(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [title, setTitle] = useState('')
+  const [textContent, setTextContent] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      router.push('/login')
+    }
+  }, [router])
 
   const handleMediaClick = (type: MediaType) => {
     setSelectedMedia(type)
     setSelectedDate(new Date().toISOString().split('T')[0])
+    setTitle('')
+    setTextContent('')
+    setSelectedFile(null)
   }
 
   const handleClose = () => {
     setSelectedMedia(null)
     setSelectedDate('')
+    setTitle('')
+    setTextContent('')
+    setSelectedFile(null)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Upload logic here
-    console.log('[v0] Upload submitted:', { selectedMedia, selectedDate })
-    handleClose()
+    if (!selectedMedia) return
+
+    setIsUploading(true)
+
+    try {
+      if (selectedMedia === 'text') {
+        // Text memory
+        if (!textContent.trim()) {
+          toast({
+            variant: 'destructive',
+            title: 'Metin boş',
+            description: 'Lütfen bir metin girin.',
+          })
+          return
+        }
+
+        await apiService.createMemory({
+          type: selectedMedia,
+          title: title || undefined,
+          content: textContent,
+          date: selectedDate,
+        })
+      } else {
+        // File upload
+        if (!selectedFile) {
+          toast({
+            variant: 'destructive',
+            title: 'Dosya seçilmedi',
+            description: 'Lütfen bir dosya seçin.',
+          })
+          return
+        }
+
+        const uploadRes = await apiService.uploadFile(selectedFile, selectedMedia, selectedDate, title || undefined)
+
+        // Create memory record linking uploaded file
+        await apiService.createMemory({
+          type: selectedMedia,
+          title: title || undefined,
+          content: undefined,
+          date: selectedDate,
+          // backend expects FileUrl/MimeType fields; map using frontend keys
+          fileUrl: uploadRes.fileUrl,
+          thumbnailUrl: uploadRes.thumbnailUrl,
+          mimeType: uploadRes.mimeType,
+          fileSize: uploadRes.fileSize
+        } as any)
+      }
+
+      toast({
+        title: 'Anı eklendi!',
+        description: 'Anınız başarıyla kaydedildi.',
+      })
+
+      handleClose()
+      // Redirect to memory box to view the new memory
+      router.push('/dashboard/box')
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Yükleme hatası',
+        description: 'Anı eklenirken bir hata oluştu. Lütfen tekrar deneyin.',
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -197,7 +284,9 @@ export default function DashboardPage() {
                               ? 'audio/*'
                               : undefined
                           }
+                          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                           className="h-11"
+                          disabled={isUploading}
                           required
                         />
                       </div>
@@ -211,6 +300,9 @@ export default function DashboardPage() {
                           id="text"
                           placeholder="Anınızı buraya yazın..."
                           className="min-h-[120px] resize-none"
+                          value={textContent}
+                          onChange={(e) => setTextContent(e.target.value)}
+                          disabled={isUploading}
                           required
                         />
                       </div>
@@ -224,6 +316,9 @@ export default function DashboardPage() {
                         type="text"
                         placeholder="Anınıza bir başlık verin"
                         className="h-11"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        disabled={isUploading}
                       />
                     </div>
 
@@ -236,13 +331,25 @@ export default function DashboardPage() {
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         className="h-11"
+                        disabled={isUploading}
                         required
                       />
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full h-11 text-base font-medium">
-                      Anı Ekle
+                    <Button 
+                      type="submit" 
+                      className="w-full h-11 text-base font-medium"
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Ekleniyor...
+                        </>
+                      ) : (
+                        'Anı Ekle'
+                      )}
                     </Button>
                   </form>
                 </div>

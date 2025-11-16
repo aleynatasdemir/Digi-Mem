@@ -13,11 +13,13 @@ public class UserController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<UserController> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public UserController(UserManager<ApplicationUser> userManager, ILogger<UserController> logger)
+    public UserController(UserManager<ApplicationUser> userManager, ILogger<UserController> logger, IWebHostEnvironment env)
     {
         _userManager = userManager;
         _logger = logger;
+        _env = env;
     }
 
     private string GetUserId()
@@ -45,6 +47,7 @@ public class UserController : ControllerBase
                 id = user.Id,
                 email = user.Email,
                 userName = user.UserName,
+                profilePhotoUrl = user.ProfilePhotoUrl,
                 emailConfirmed = user.EmailConfirmed,
                 memberSince = user.CreatedAt
             });
@@ -53,6 +56,121 @@ public class UserController : ControllerBase
         {
             _logger.LogError(ex, "Failed to get user profile");
             return StatusCode(500, new { error = "Failed to get user profile" });
+        }
+    }
+
+    // POST: api/user/profile-photo
+    [HttpPost("profile-photo")]
+    public async Task<ActionResult<object>> UploadProfilePhoto([FromForm] IFormFile file)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "Dosya seçilmedi." });
+            }
+
+            // Validate file type
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+            if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            {
+                return BadRequest(new { error = "Sadece resim dosyaları yüklenebilir." });
+            }
+
+            // Validate file size (max 5MB)
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new { error = "Dosya boyutu 5MB'dan küçük olmalıdır." });
+            }
+
+            // Create upload directory
+            var uploadPath = Path.Combine(_env.WebRootPath, "uploads", "profiles", userId);
+            Directory.CreateDirectory(uploadPath);
+
+            // Delete old profile photo if exists
+            if (!string.IsNullOrEmpty(user.ProfilePhotoUrl))
+            {
+                var oldPhotoPath = Path.Combine(_env.WebRootPath, user.ProfilePhotoUrl.TrimStart('/'));
+                if (System.IO.File.Exists(oldPhotoPath))
+                {
+                    System.IO.File.Delete(oldPhotoPath);
+                }
+            }
+
+            // Save new photo
+            var fileName = $"profile_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Update user profile photo URL
+            user.ProfilePhotoUrl = $"/uploads/profiles/{userId}/{fileName}";
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("Profile photo uploaded for user {UserId}", userId);
+
+            return Ok(new
+            {
+                profilePhotoUrl = user.ProfilePhotoUrl,
+                message = "Profil fotoğrafı güncellendi."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload profile photo");
+            return StatusCode(500, new { error = "Failed to upload profile photo" });
+        }
+    }
+
+    // DELETE: api/user/profile-photo
+    [HttpDelete("profile-photo")]
+    public async Task<IActionResult> DeleteProfilePhoto()
+    {
+        try
+        {
+            var userId = GetUserId();
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            if (string.IsNullOrEmpty(user.ProfilePhotoUrl))
+            {
+                return BadRequest(new { error = "Profil fotoğrafı bulunamadı." });
+            }
+
+            // Delete photo file
+            var photoPath = Path.Combine(_env.WebRootPath, user.ProfilePhotoUrl.TrimStart('/'));
+            if (System.IO.File.Exists(photoPath))
+            {
+                System.IO.File.Delete(photoPath);
+            }
+
+            // Update user
+            user.ProfilePhotoUrl = null;
+            await _userManager.UpdateAsync(user);
+
+            _logger.LogInformation("Profile photo deleted for user {UserId}", userId);
+
+            return Ok(new { message = "Profil fotoğrafı silindi." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete profile photo");
+            return StatusCode(500, new { error = "Failed to delete profile photo" });
         }
     }
 

@@ -423,6 +423,7 @@ frontv2/.next/
 frontv2/out/
 frontv2/.turbo/
 frontv2/dist/
+frontv2/.env.local
 
 # Old frontend (if not needed)
 front/node_modules/

@@ -51,14 +51,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS - Frontend ve Flutter Web için
+// CORS - Frontend için
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin => 
-            origin.StartsWith("http://localhost") || 
-            origin.StartsWith("http://127.0.0.1"))
+        policy.WithOrigins("http://localhost:3000", "http://localhost:8080")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -129,9 +127,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-// Serve static files from wwwroot (uploaded files are saved under wwwroot/uploads)
-app.UseStaticFiles();
 
 app.UseCors("AllowFrontend");
 app.UseSession();

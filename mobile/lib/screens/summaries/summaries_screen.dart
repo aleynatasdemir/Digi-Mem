@@ -1,30 +1,6 @@
 import 'package:flutter/material.dart';
-
-// Mock data
-const weeklyData = [
-  {'day': 'Pzt', 'uploads': 3},
-  {'day': 'Sal', 'uploads': 5},
-  {'day': 'Çar', 'uploads': 2},
-  {'day': 'Per', 'uploads': 4},
-  {'day': 'Cum', 'uploads': 7},
-  {'day': 'Cmt', 'uploads': 6},
-  {'day': 'Paz', 'uploads': 3},
-];
-
-const monthlyTrendData = [
-  {'week': '1. Hafta', 'uploads': 15},
-  {'week': '2. Hafta', 'uploads': 22},
-  {'week': '3. Hafta', 'uploads': 18},
-  {'week': '4. Hafta', 'uploads': 30},
-];
-
-const formatData = {
-  'photo': 45,
-  'video': 12,
-  'audio': 8,
-  'text': 23,
-  'music': 7,
-};
+import '../../services/memory_service.dart';
+import '../../models/memory.dart';
 
 class SummariesScreen extends StatefulWidget {
   const SummariesScreen({super.key});
@@ -34,7 +10,37 @@ class SummariesScreen extends StatefulWidget {
 }
 
 class _SummariesScreenState extends State<SummariesScreen> {
+  final _memoryService = MemoryService();
   String? _selectedPeriod;
+  bool _isLoading = true;
+  MemoryStats? _stats;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final stats = await _memoryService.getStats();
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'İstatistikler yüklenirken hata oluştu: $e';
+        _isLoading = false;
+      });
+    }
+  }
   
   void _showSummaryTypeDialog(String period) {
     showDialog(
@@ -208,15 +214,78 @@ class _SummariesScreenState extends State<SummariesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalWeekly = weeklyData.fold<int>(0, (sum, day) => sum + (day['uploads'] as int));
-    final weeklyAverage = (totalWeekly / 7).toStringAsFixed(1);
-    final monthlyAverage = ((totalWeekly / 7) * 30).toStringAsFixed(0);
+    
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Özetler'),
+          centerTitle: false,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Özetler'),
+          centerTitle: false,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(_errorMessage!, textAlign: TextAlign.center),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _loadStats,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Tekrar Dene'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_stats == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Özetler'),
+          centerTitle: false,
+        ),
+        body: const Center(
+          child: Text('İstatistik bulunamadı'),
+        ),
+      );
+    }
+
+    final dailyAverage = _stats!.averages['daily']?.toStringAsFixed(1) ?? '0.0';
+    final weeklyTotal = _stats!.totals['week']?.toString() ?? '0';
+    final monthlyAverage = _stats!.averages['monthly']?.toStringAsFixed(0) ?? '0';
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Özetler'),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadStats,
+            tooltip: 'Yenile',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -248,7 +317,7 @@ class _SummariesScreenState extends State<SummariesScreen> {
                     context,
                     icon: Icons.calendar_today_outlined,
                     title: 'Günlük Ort.',
-                    value: weeklyAverage,
+                    value: dailyAverage,
                     subtitle: 'anı / gün',
                   ),
                 ),
@@ -258,7 +327,7 @@ class _SummariesScreenState extends State<SummariesScreen> {
                     context,
                     icon: Icons.calendar_today_outlined,
                     title: 'Haftalık',
-                    value: totalWeekly.toString(),
+                    value: weeklyTotal,
                     subtitle: 'anı / hafta',
                   ),
                 ),
@@ -382,7 +451,11 @@ class _SummariesScreenState extends State<SummariesScreen> {
 
   Widget _buildWeeklyChart(BuildContext context) {
     final theme = Theme.of(context);
-    final maxValue = weeklyData.map((d) => d['uploads'] as int).reduce((a, b) => a > b ? a : b);
+    final weeklyData = _stats!.weeklyData;
+    if (weeklyData.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final maxValue = weeklyData.map((d) => d['count'] as int).reduce((a, b) => a > b ? a : b);
     
     return Card(
       elevation: 0,
@@ -415,8 +488,8 @@ class _SummariesScreenState extends State<SummariesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: weeklyData.map((day) {
-                  final uploads = day['uploads'] as int;
-                  final height = (uploads / maxValue) * 150;
+                  final uploads = day['count'] as int;
+                  final height = maxValue > 0 ? (uploads / maxValue) * 150 : 0.0;
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -455,7 +528,11 @@ class _SummariesScreenState extends State<SummariesScreen> {
 
   Widget _buildMonthlyTrend(BuildContext context) {
     final theme = Theme.of(context);
-    final maxValue = monthlyTrendData.map((d) => d['uploads'] as int).reduce((a, b) => a > b ? a : b);
+    final monthlyTrend = _stats!.monthlyTrend;
+    if (monthlyTrend.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final maxValue = monthlyTrend.map((d) => d['count'] as int).reduce((a, b) => a > b ? a : b);
     
     return Card(
       elevation: 0,
@@ -486,7 +563,7 @@ class _SummariesScreenState extends State<SummariesScreen> {
               height: 120,
               child: CustomPaint(
                 painter: _LinePainter(
-                  data: monthlyTrendData.map((d) => d['uploads'] as int).toList(),
+                  data: monthlyTrend.map((d) => d['count'] as int).toList(),
                   maxValue: maxValue,
                   color: theme.colorScheme.primary,
                 ),
@@ -496,7 +573,7 @@ class _SummariesScreenState extends State<SummariesScreen> {
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: monthlyTrendData.map((week) {
+              children: monthlyTrend.map((week) {
                 return Text(
                   week['week'] as String,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -513,7 +590,18 @@ class _SummariesScreenState extends State<SummariesScreen> {
 
   Widget _buildFormatDistribution(BuildContext context) {
     final theme = Theme.of(context);
-    final total = formatData.values.reduce((a, b) => a + b);
+    final formatDistribution = _stats!.formatDistribution;
+    if (formatDistribution.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final total = formatDistribution.fold<int>(0, (sum, item) => sum + (item['count'] as int));
+    if (total == 0) {
+      return const SizedBox.shrink();
+    }
+    
+    final formatMap = {
+      for (var item in formatDistribution) item['type'] as String: item['count'] as int
+    };
     
     return Card(
       elevation: 0,
@@ -540,15 +628,24 @@ class _SummariesScreenState extends State<SummariesScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildFormatBar(context, Icons.image_outlined, 'Fotoğraf', formatData['photo']!, total, Colors.blue),
-            const SizedBox(height: 16),
-            _buildFormatBar(context, Icons.videocam_outlined, 'Video', formatData['video']!, total, Colors.red),
-            const SizedBox(height: 16),
-            _buildFormatBar(context, Icons.text_fields, 'Metin', formatData['text']!, total, Colors.orange),
-            const SizedBox(height: 16),
-            _buildFormatBar(context, Icons.mic_outlined, 'Ses', formatData['audio']!, total, Colors.green),
-            const SizedBox(height: 16),
-            _buildFormatBar(context, Icons.music_note_outlined, 'Şarkı', formatData['music']!, total, Colors.purple),
+            if (formatMap.containsKey('photo')) ...[
+              _buildFormatBar(context, Icons.image_outlined, 'Fotoğraf', formatMap['photo']!, total, Colors.blue),
+              const SizedBox(height: 16),
+            ],
+            if (formatMap.containsKey('video')) ...[
+              _buildFormatBar(context, Icons.videocam_outlined, 'Video', formatMap['video']!, total, Colors.red),
+              const SizedBox(height: 16),
+            ],
+            if (formatMap.containsKey('text')) ...[
+              _buildFormatBar(context, Icons.text_fields, 'Metin', formatMap['text']!, total, Colors.orange),
+              const SizedBox(height: 16),
+            ],
+            if (formatMap.containsKey('audio')) ...[
+              _buildFormatBar(context, Icons.mic_outlined, 'Ses', formatMap['audio']!, total, Colors.green),
+              const SizedBox(height: 16),
+            ],
+            if (formatMap.containsKey('music'))
+              _buildFormatBar(context, Icons.music_note_outlined, 'Şarkı', formatMap['music']!, total, Colors.purple),
           ],
         ),
       ),

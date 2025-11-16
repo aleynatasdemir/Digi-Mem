@@ -44,7 +44,17 @@ public class AuthController : ControllerBase
         }
 
         var token = GenerateJwtToken(user);
-        return Ok(new { token, email = user.Email });
+        return Ok(new
+        {
+            token,
+            user = new
+            {
+                id = user.Id,
+                email = user.Email,
+                name = user.UserName,
+                createdAt = user.CreatedAt.ToString("o")
+            }
+        });
     }
 
     [HttpPost("login")]
@@ -56,6 +66,12 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials" });
         }
 
+        // Check if user is banned
+        if (user.IsBanned)
+        {
+            return Unauthorized(new { message = "Bu hesap yasaklanmıştır. Lütfen yönetici ile iletişime geçin." });
+        }
+
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
         if (!result.Succeeded)
         {
@@ -63,7 +79,17 @@ public class AuthController : ControllerBase
         }
 
         var token = GenerateJwtToken(user);
-        return Ok(new { token, email = user.Email });
+        return Ok(new
+        {
+            token,
+            user = new
+            {
+                id = user.Id,
+                email = user.Email,
+                name = user.UserName,
+                createdAt = user.CreatedAt.ToString("o")
+            }
+        });
     }
 
     private string GenerateJwtToken(ApplicationUser user)
@@ -71,14 +97,23 @@ public class AuthController : ControllerBase
         var jwtSecret = _configuration["Jwt:Secret"] ?? "your-super-secret-key-min-32-characters-long!";
         var key = Encoding.ASCII.GetBytes(jwtSecret);
 
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Email, user.Email!),
+            new Claim(ClaimTypes.Name, user.UserName!)
+        };
+
+        // Add role claims
+        var roles = _userManager.GetRolesAsync(user).Result;
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email!),
-                new Claim(ClaimTypes.Name, user.UserName!)
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddDays(7),
             SigningCredentials = new SigningCredentials(
                 new SymmetricSecurityKey(key),

@@ -1,57 +1,64 @@
 'use client'
 
-import { useState } from 'react'
-import { Brain, Box, FileText, Settings, ChevronLeft, ChevronRight, X, ImageIcon, Video, Music, Mic, Type } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Brain, Box, FileText, Settings, ChevronLeft, ChevronRight, X, ImageIcon, Video, Music, Mic, Type, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { apiService } from '@/lib/api'
+import { Memory as MemoryType } from '@/lib/types'
 
-// Mock data for demonstration
-const mockMemories = {
-  '2025-11': {
-    1: { type: 'photo', image: '/autumn-nature.jpg' },
-    3: { type: 'video', image: '/family-gathering.png' },
-    5: { type: 'text' },
-    7: { type: 'photo', image: '/sunset-beach-tranquil.png' },
-    10: { type: 'music' },
-    12: { type: 'photo', image: '/festive-birthday-cake.png', additional: ['video', 'text'] },
-    15: { type: 'audio' },
-    18: { type: 'photo', image: '/majestic-mountain-vista.png' },
-    20: { type: 'video', image: '/vibrant-concert-night.png' },
-    22: { type: 'text' },
-    25: { type: 'photo', image: '/christmas-lights.png' },
-    28: { type: 'music' },
-  },
-  '2025-10': {
-    2: { type: 'photo', image: '/fall-leaves.jpg' },
-    5: { type: 'video', image: '/winding-forest-trail.png' },
-    8: { type: 'text' },
-    12: { type: 'photo', image: '/coffee-morning.png' },
-    15: { type: 'audio' },
-    18: { type: 'photo', image: '/vibrant-city-skyline.png', additional: ['music'] },
-    21: { type: 'music' },
-    25: { type: 'photo', image: '/rainy-city-street.png' },
-    29: { type: 'video', image: '/halloween-party.png' },
-    31: { type: 'photo', image: '/creative-halloween-costume.png' },
-  },
-}
-
-type MemoryType = 'photo' | 'video' | 'text' | 'audio' | 'music'
-
-interface Memory {
-  type: MemoryType
-  image?: string
-  additional?: MemoryType[]
+interface MemoriesByDate {
+  [key: string]: MemoryType[]
 }
 
 const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
 const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 
 export default function BoxPage() {
-  const [selectedDay, setSelectedDay] = useState<{ month: string; day: number } | null>(null)
+  const router = useRouter()
+  const [selectedDay, setSelectedDay] = useState<{ memories: MemoryType[]; date: string } | null>(null)
+  const [memories, setMemories] = useState<MemoriesByDate>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1)
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    loadMemories()
+  }, [router])
+
+  const loadMemories = async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiService.getMemories()
+      
+      // Group memories by memoryDate (user-selected date)
+      const grouped: MemoriesByDate = {}
+      response.memories.forEach((memory) => {
+        const date = memory.memoryDate.split('T')[0] // YYYY-MM-DD
+        if (!grouped[date]) {
+          grouped[date] = []
+        }
+        grouped[date].push(memory)
+      })
+      
+      setMemories(grouped)
+    } catch (error) {
+      console.error('Failed to load memories:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const renderCalendar = (year: number, month: number) => {
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`
     const firstDay = new Date(year, month - 1, 1)
     const lastDay = new Date(year, month, 0)
     const daysInMonth = lastDay.getDate()
@@ -66,13 +73,15 @@ export default function BoxPage() {
 
     // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const memory = mockMemories[monthKey]?.[day] as Memory | undefined
-      const hasMemory = !!memory
+      const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      const dayMemories = memories[dateKey] || []
+      const hasMemory = dayMemories.length > 0
+      const primaryMemory = dayMemories[0]
 
       days.push(
         <button
           key={day}
-          onClick={() => hasMemory && setSelectedDay({ month: monthKey, day })}
+          onClick={() => hasMemory && setSelectedDay({ memories: dayMemories, date: dateKey })}
           className={`
             group relative aspect-square overflow-hidden rounded-lg border-2 transition-all
             ${hasMemory 
@@ -82,10 +91,10 @@ export default function BoxPage() {
           `}
         >
           {/* Background Image for photo/video */}
-          {memory?.image && (
+          {primaryMemory && (primaryMemory.type === 'photo' || primaryMemory.type === 'video') && primaryMemory.filePath && (
             <div 
               className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-60 transition-opacity"
-              style={{ backgroundImage: `url(${memory.image})` }}
+              style={{ backgroundImage: `url(${apiService.getFileUrl(primaryMemory.filePath)})` }}
             />
           )}
 
@@ -98,28 +107,35 @@ export default function BoxPage() {
           </div>
 
           {/* Media Type Icons */}
-          {memory && (
+          {primaryMemory && (
             <div className="absolute inset-0 flex items-center justify-center">
-              {!memory.image && (
+              {primaryMemory.type !== 'photo' && primaryMemory.type !== 'video' && (
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
-                  {memory.type === 'text' && <Type className="h-5 w-5 text-primary" />}
-                  {memory.type === 'audio' && <Mic className="h-5 w-5 text-primary" />}
-                  {memory.type === 'music' && <Music className="h-5 w-5 text-primary" />}
+                  {primaryMemory.type === 'text' && <Type className="h-5 w-5 text-primary" />}
+                  {primaryMemory.type === 'audio' && <Mic className="h-5 w-5 text-primary" />}
+                  {primaryMemory.type === 'music' && <Music className="h-5 w-5 text-primary" />}
                 </div>
               )}
             </div>
           )}
 
           {/* Additional Media Indicators */}
-          {memory?.additional && (
+          {dayMemories.length > 1 && (
             <div className="absolute bottom-1 right-1 flex gap-1">
-              {memory.additional.map((type, idx) => (
+              {dayMemories.slice(1, 4).map((mem, idx) => (
                 <div key={idx} className="flex h-5 w-5 items-center justify-center rounded-full bg-background/90">
-                  {type === 'video' && <Video className="h-3 w-3 text-primary" />}
-                  {type === 'text' && <Type className="h-3 w-3 text-primary" />}
-                  {type === 'music' && <Music className="h-3 w-3 text-primary" />}
+                  {mem.type === 'photo' && <ImageIcon className="h-3 w-3 text-primary" />}
+                  {mem.type === 'video' && <Video className="h-3 w-3 text-primary" />}
+                  {mem.type === 'text' && <Type className="h-3 w-3 text-primary" />}
+                  {mem.type === 'audio' && <Mic className="h-3 w-3 text-primary" />}
+                  {mem.type === 'music' && <Music className="h-3 w-3 text-primary" />}
                 </div>
               ))}
+              {dayMemories.length > 4 && (
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-[10px] font-bold text-primary">
+                  +{dayMemories.length - 3}
+                </div>
+              )}
             </div>
           )}
         </button>
@@ -172,59 +188,70 @@ export default function BoxPage() {
 
       {/* Main Content - Calendar */}
       <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="space-y-8">
-          {/* November 2025 */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">Kasım 2025</h2>
-            </div>
-            
-            {/* Days of Week Header */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {DAYS.map(day => (
-                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                  {day}
-                </div>
-              ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Current Month */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold">{MONTHS[currentMonth - 1]} {currentYear}</h2>
+              </div>
+              
+              {/* Days of Week Header */}
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {DAYS.map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {renderCalendar(currentYear, currentMonth)}
+              </div>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
-              {renderCalendar(2025, 11)}
+            {/* Previous Month */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold">
+                  {MONTHS[currentMonth === 1 ? 11 : currentMonth - 2]} {currentMonth === 1 ? currentYear - 1 : currentYear}
+                </h2>
+              </div>
+              
+              {/* Days of Week Header */}
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {DAYS.map(day => (
+                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {renderCalendar(
+                  currentMonth === 1 ? currentYear - 1 : currentYear, 
+                  currentMonth === 1 ? 12 : currentMonth - 1
+                )}
+              </div>
             </div>
           </div>
-
-          {/* October 2025 */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">Ekim 2025</h2>
-            </div>
-            
-            {/* Days of Week Header */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {DAYS.map(day => (
-                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
-              {renderCalendar(2025, 10)}
-            </div>
-          </div>
-        </div>
+        )}
       </main>
 
       {/* Memory Detail Modal */}
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="relative w-full max-w-2xl">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <div className="rounded-xl border border-border bg-card p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">
-                  {selectedDay.day} {MONTHS[parseInt(selectedDay.month.split('-')[1]) - 1]} {selectedDay.month.split('-')[0]}
+                  {new Date(selectedDay.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </h2>
                 <Button
                   variant="ghost"
@@ -237,12 +264,54 @@ export default function BoxPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-lg border border-border bg-muted/50 p-8 text-center">
-                  <p className="text-muted-foreground">Anı içeriği burada görüntülenecek</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Tip: {mockMemories[selectedDay.month]?.[selectedDay.day]?.type}
-                  </p>
-                </div>
+                {selectedDay.memories.map((memory) => (
+                  <div key={memory.id} className="rounded-lg border border-border bg-muted/50 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        {memory.type === 'photo' && <ImageIcon className="h-5 w-5 text-primary" />}
+                        {memory.type === 'video' && <Video className="h-5 w-5 text-primary" />}
+                        {memory.type === 'text' && <Type className="h-5 w-5 text-primary" />}
+                        {memory.type === 'audio' && <Mic className="h-5 w-5 text-primary" />}
+                        {memory.type === 'music' && <Music className="h-5 w-5 text-primary" />}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        {memory.title && (
+                          <h3 className="font-semibold">{memory.title}</h3>
+                        )}
+                        {memory.type === 'text' && memory.content && (
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{memory.content}</p>
+                        )}
+                        {(memory.type === 'photo' || memory.type === 'video') && memory.filePath && (
+                          <div className="rounded-lg overflow-hidden">
+                            {memory.type === 'photo' ? (
+                              <img 
+                                src={apiService.getFileUrl(memory.filePath)} 
+                                alt={memory.title || 'Memory'}
+                                className="w-full h-auto"
+                              />
+                            ) : (
+                              <video 
+                                src={apiService.getFileUrl(memory.filePath)} 
+                                controls
+                                className="w-full h-auto"
+                              />
+                            )}
+                          </div>
+                        )}
+                        {(memory.type === 'audio' || memory.type === 'music') && memory.filePath && (
+                          <audio 
+                            src={apiService.getFileUrl(memory.filePath)} 
+                            controls
+                            className="w-full"
+                          />
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(memory.createdAt).toLocaleString('tr-TR')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
