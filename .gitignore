@@ -454,9 +454,11 @@ Desktop.ini
 *.temp
 .cache
 
-# Configuration files with secrets (uncomment if needed)
+# Configuration files with secrets
 appsettings.Development.json
 appsettings.Production.json
+backend/appsettings.Development.json
+backend/appsettings.Production.json
 
 # Docker volumes
 data/
