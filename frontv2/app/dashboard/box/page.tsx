@@ -26,7 +26,7 @@ export default function BoxPage() {
 
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('token')
     if (!token) {
       router.push('/login')
       return
@@ -109,8 +109,9 @@ export default function BoxPage() {
           {/* Media Type Icons */}
           {primaryMemory && (
             <div className="absolute inset-0 flex items-center justify-center">
-              {primaryMemory.type !== 'photo' && primaryMemory.type !== 'video' && (
+              {primaryMemory.type !== 'photo' && (
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background/90">
+                  {primaryMemory.type === 'video' && <Video className="h-5 w-5 text-primary" />}
                   {primaryMemory.type === 'text' && <Type className="h-5 w-5 text-primary" />}
                   {primaryMemory.type === 'audio' && <Mic className="h-5 w-5 text-primary" />}
                   {primaryMemory.type === 'music' && <Music className="h-5 w-5 text-primary" />}

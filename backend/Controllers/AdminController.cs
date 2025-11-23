@@ -30,6 +30,9 @@ public class AdminController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] bool? isBanned = null)
     {
+        Console.WriteLine($"[AdminController] GetUsers called by user: {User.Identity?.Name}");
+        Console.WriteLine($"[AdminController] User is in Admin role: {User.IsInRole("Admin")}");
+        
         var query = _userManager.Users.AsQueryable();
 
         // Search filter

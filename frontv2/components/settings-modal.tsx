@@ -167,8 +167,21 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       const data = await response.json()
       
-      setUserData({ ...userData, avatarUrl: data.profilePhotoUrl })
-      setEditData({ ...editData, avatarUrl: data.profilePhotoUrl })
+      // Kullanıcı bilgilerini yeniden çek
+      const updatedUser = await apiService.getCurrentUser()
+      setUserData({
+        ...userData,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        memberSince: updatedUser.createdAt,
+        avatarUrl: updatedUser.profilePhotoUrl || ""
+      })
+      setEditData({
+        ...editData,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatarUrl: updatedUser.profilePhotoUrl || ""
+      })
       
       toast({
         title: 'Başarılı',

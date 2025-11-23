@@ -1,0 +1,478 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/memory_service.dart';
+
+class SummariesScreen extends StatefulWidget {
+  const SummariesScreen({Key? key}) : super(key: key);
+
+  @override
+  State<SummariesScreen> createState() => _SummariesScreenState();
+}
+
+class _SummariesScreenState extends State<SummariesScreen> {
+  int _step = 1;
+  String? _periodType; // WEEK, MONTH, YEAR
+  String? _specificDateValue;
+  String? _generationType; // SUMMARY, COLLAGE
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Analiz ve Özetler',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 24),
+            _buildStatsCards(),
+            const SizedBox(height: 24),
+            _buildWizard(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsCards() {
+    return Consumer<MemoryService>(
+      builder: (context, service, _) {
+        final total = service.memories.length;
+        final thisMonth = service.memories
+            .where((m) => m.createdAt.month == DateTime.now().month)
+            .length;
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    title: 'Toplam Anı',
+                    value: '$total',
+                    icon: Icons.collections_rounded,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    title: 'Bu Ay',
+                    value: '$thisMonth',
+                    icon: Icons.calendar_today_rounded,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _StatCard(
+              title: 'Haftalık Aktivite',
+              value: '+12%',
+              icon: Icons.trending_up_rounded,
+              color: Colors.purple,
+              isWide: true,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildWizard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade50,
+            Colors.indigo.shade50,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.auto_awesome_rounded,
+                  color: Colors.amber.shade700, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Sihirli Anı Asistanı',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Seçtiğin tarih aralığındaki anıları harika bir hikayeye dönüştürelim.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[700], fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          if (_step == 1) _buildStep1PeriodType(),
+          if (_step == 2) _buildStep2SpecificDate(),
+          if (_step == 3) _buildStep3ContentType(),
+          if (_step == 4) _buildStep4Result(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep1PeriodType() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '1. Hangi dönemi özetleyelim?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _PeriodButton(
+                label: 'Haftalık',
+                icon: Icons.date_range_rounded,
+                onTap: () => setState(() {
+                  _periodType = 'WEEK';
+                  _step = 2;
+                }),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _PeriodButton(
+                label: 'Aylık',
+                icon: Icons.calendar_month_rounded,
+                onTap: () => setState(() {
+                  _periodType = 'MONTH';
+                  _step = 2;
+                }),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _PeriodButton(
+                label: 'Yıllık',
+                icon: Icons.calendar_today_rounded,
+                onTap: () => setState(() {
+                  _periodType = 'YEAR';
+                  _step = 2;
+                }),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep2SpecificDate() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '2. Hangi ${_periodType == 'WEEK' ? 'hafta' : _periodType == 'MONTH' ? 'ay' : 'yıl'}?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          decoration: InputDecoration(
+            hintText: _periodType == 'YEAR' ? 'Örn: 2024' : 'Tarih seçin',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          onChanged: (value) => _specificDateValue = value,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            TextButton(
+              onPressed: () => setState(() => _step = 1),
+              child: const Text('Geri'),
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () => setState(() => _step = 3),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Devam Et'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3ContentType() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '3. Ne oluşturmak istersin?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 16),
+        _ContentTypeCard(
+          title: 'Hikaye Özeti',
+          subtitle: 'Yapay zeka ile bu dönemin hikayesini yaz',
+          icon: Icons.auto_awesome_rounded,
+          color: Colors.amber,
+          onTap: () => setState(() {
+            _generationType = 'SUMMARY';
+            _step = 4;
+          }),
+        ),
+        const SizedBox(height: 12),
+        _ContentTypeCard(
+          title: 'Anı Kolajı',
+          subtitle: 'Bu döneme ait fotoğraflardan bir kolaj oluştur',
+          icon: Icons.grid_view_rounded,
+          color: Colors.purple,
+          onTap: () => setState(() {
+            _generationType = 'COLLAGE';
+            _step = 4;
+          }),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () => setState(() => _step = 2),
+          child: const Text('Tarihi Değiştir'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep4Result() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle_rounded,
+                  color: Colors.green.shade600, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Özet Oluşturuldu',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => setState(() {
+                  _step = 1;
+                  _periodType = null;
+                  _specificDateValue = null;
+                  _generationType = null;
+                }),
+                child: const Text('Yeni Oluştur'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _generationType == 'SUMMARY'
+                ? 'Bu dönemde toplam ${Provider.of<MemoryService>(context, listen: false).memories.length} anı eklendi. En çok fotoğraf ve video tipi anılar paylaşıldı. Güzel günler geçirdiğiniz anlaşılıyor!'
+                : 'Kolaj görüntüsü burada gösterilecek',
+            style: TextStyle(color: Colors.grey[700], height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final bool isWide;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.isWide = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PeriodButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _PeriodButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.grey[700]),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContentTypeCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ContentTypeCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 16, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+}

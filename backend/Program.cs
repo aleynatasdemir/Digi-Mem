@@ -51,17 +51,27 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS - Frontend ve Flutter Web için
+// CORS - Frontend, Flutter Web ve Mobil için
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.SetIsOriginAllowed(origin => 
             origin.StartsWith("http://localhost") || 
-            origin.StartsWith("http://127.0.0.1"))
+            origin.StartsWith("http://127.0.0.1") ||
+            origin.StartsWith("http://10.0.2.2") || // Android emulator
+            origin.Contains("192.168.")) // Local network için
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
+    });
+    
+    // Mobil uygulama için daha esnek CORS
+    options.AddPolicy("AllowMobile", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -133,7 +143,8 @@ if (app.Environment.IsDevelopment())
 // Serve static files from wwwroot (uploaded files are saved under wwwroot/uploads)
 app.UseStaticFiles();
 
-app.UseCors("AllowFrontend");
+// CORS - Hem web hem mobil için
+app.UseCors("AllowMobile");
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();

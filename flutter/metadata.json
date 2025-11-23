@@ -1,0 +1,8 @@
+{
+  "name": "Digi-Mem Web",
+  "description": "A comprehensive digital memory management dashboard featuring AI-powered summaries, rich media support, and analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

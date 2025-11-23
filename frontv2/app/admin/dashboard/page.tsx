@@ -72,6 +72,15 @@ export default function AdminDashboardPage() {
       return
     }
 
+    // Debug: decode JWT token to check roles
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      console.log('JWT Token Payload:', payload)
+      console.log('User roles:', payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'])
+    } catch (e) {
+      console.error('Failed to decode token:', e)
+    }
+
     loadUsers()
     loadGlobalStats()
   }, [currentPage, searchTerm])
@@ -89,12 +98,18 @@ export default function AdminDashboardPage() {
         }
       )
 
-      if (!response.ok) throw new Error('Failed to load users')
+      console.log('Admin users API response status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Admin users API error:', errorText)
+        throw new Error('Failed to load users')
+      }
 
       const data = await response.json()
       console.log('Loaded users:', data) // Debug log
-      setUsers(data.users)
-      setTotalPages(data.totalPages)
+      setUsers(data.users || [])
+      setTotalPages(data.totalPages || 1)
     } catch (error) {
       console.error('Failed to load users:', error)
       toast({

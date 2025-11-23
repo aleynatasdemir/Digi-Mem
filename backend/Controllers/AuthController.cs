@@ -78,6 +78,9 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials" });
         }
 
+        var roles = await _userManager.GetRolesAsync(user);
+        Console.WriteLine($"[AuthController] User {user.Email} logged in with roles: {string.Join(", ", roles)}");
+
         var token = GenerateJwtToken(user);
         return Ok(new
         {

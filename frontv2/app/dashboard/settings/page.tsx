@@ -39,6 +39,18 @@ export default function SettingsPage() {
   useEffect(() => {
     loadUserData()
     loadStats()
+
+    // Sayfa görünür olduğunda istatistikleri yeniden yükle
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStats()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   const loadUserData = async () => {
@@ -152,9 +164,27 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error('Upload failed')
 
       const data = await response.json()
+      console.log('Profile photo upload response:', data)
       
-      setUserData({ ...userData, avatarUrl: data.profilePhotoUrl })
-      setEditData({ ...editData, avatarUrl: data.profilePhotoUrl })
+      // Kullanıcı bilgilerini yeniden çek
+      const updatedUser = await apiService.getCurrentUser()
+      console.log('Updated user after photo upload:', updatedUser)
+      setUserData({
+        ...userData,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        memberSince: updatedUser.createdAt,
+        avatarUrl: updatedUser.profilePhotoUrl || ""
+      })
+      setEditData({
+        ...editData,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatarUrl: updatedUser.profilePhotoUrl || ""
+      })
+      
+      // İstatistikleri de yeniden yükle
+      await loadStats()
       
       toast({
         title: 'Başarılı',

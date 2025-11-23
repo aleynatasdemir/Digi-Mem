@@ -89,6 +89,7 @@ class ApiService {
 
   async getCurrentUser(): Promise<User> {
     const response: any = await this.request('/api/user/profile');
+    console.log('getCurrentUser API response:', response);
     return {
       id: response.id,
       email: response.email,

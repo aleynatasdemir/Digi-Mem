@@ -42,6 +42,8 @@ public class UserController : ControllerBase
                 return NotFound(new { error = "User not found" });
             }
 
+            _logger.LogInformation("GetProfile for user {UserId}, ProfilePhotoUrl: {PhotoUrl}", userId, user.ProfilePhotoUrl ?? "null");
+
             return Ok(new
             {
                 id = user.Id,
@@ -116,9 +118,10 @@ public class UserController : ControllerBase
 
             // Update user profile photo URL
             user.ProfilePhotoUrl = $"/uploads/profiles/{userId}/{fileName}";
-            await _userManager.UpdateAsync(user);
+            var updateResult = await _userManager.UpdateAsync(user);
 
-            _logger.LogInformation("Profile photo uploaded for user {UserId}", userId);
+            _logger.LogInformation("Profile photo uploaded for user {UserId}, PhotoUrl: {PhotoUrl}, UpdateSuccess: {Success}", 
+                userId, user.ProfilePhotoUrl, updateResult.Succeeded);
 
             return Ok(new
             {

@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem('auth_token')
+    const token = localStorage.getItem('token')
     if (!token) {
       router.push('/login')
     }

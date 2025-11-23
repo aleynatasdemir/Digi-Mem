@@ -52,14 +52,13 @@ export default function SignUpPage() {
       })
       
       toast({
-        title: 'Kayıt başarılı',
-        description: 'Hesabınız oluşturuldu. Şimdi giriş yapabilirsiniz.',
+        title: 'Kayıt başarılı! 🎉',
+        description: 'Hoş geldiniz! Dashboard\'a yönlendiriliyorsunuz.',
       })
 
-      // Token'ı sil çünkü kullanıcı login yapmalı
-      localStorage.removeItem('token')
-      
-      router.push('/login')
+      // Token zaten apiService.register() tarafından kaydedildi
+      // Direkt dashboard'a yönlendir
+      router.push('/dashboard')
     } catch (error) {
       console.error('Register error:', error)
       
