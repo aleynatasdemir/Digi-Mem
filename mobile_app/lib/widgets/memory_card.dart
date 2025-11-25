@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/memory.dart';
+import '../screens/memory_detail_screen.dart';
 
 class MemoryCard extends StatelessWidget {
   final Memory memory;
@@ -50,7 +51,12 @@ class MemoryCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: () {
-          // TODO: Navigate to memory detail
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MemoryDetailScreen(memory: memory),
+            ),
+          );
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

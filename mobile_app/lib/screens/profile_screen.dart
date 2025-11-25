@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/memory_service.dart';
+import 'profile_settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -99,10 +100,15 @@ class ProfileScreen extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.settings),
-                title: const Text('Ayarlar'),
+                title: const Text('Profil Ayarları'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // TODO: Navigate to settings
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileSettingsScreen(),
+                    ),
+                  );
                 },
               ),
               const Divider(height: 1),

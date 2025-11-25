@@ -280,10 +280,11 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
     return Consumer<MemoryService>(
       builder: (context, service, _) {
         final filteredMemories = service.memories.where((memory) {
+          final checkDate = memory.memoryDate ?? memory.createdAt;
           final matchesDate = _selectedDate == null ||
-              (memory.createdAt.year == _selectedDate!.year &&
-                  memory.createdAt.month == _selectedDate!.month &&
-                  memory.createdAt.day == _selectedDate!.day);
+              (checkDate.year == _selectedDate!.year &&
+                  checkDate.month == _selectedDate!.month &&
+                  checkDate.day == _selectedDate!.day);
 
           final matchesSearch = _searchQuery.isEmpty ||
               (memory.title ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -296,6 +297,10 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
 
           return matchesDate && matchesSearch && matchesType;
         }).toList();
+        
+        // Tarihe göre grupla ve en yeniden eskiye sırala
+        final groupedMemories = _groupMemoriesByDate(filteredMemories);
+        final sortedDates = groupedMemories.keys.toList()..sort((a, b) => b.compareTo(a));
 
         if (filteredMemories.isEmpty) {
           return Center(
@@ -326,17 +331,45 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
           );
         }
 
-        return GridView.builder(
+        return ListView.builder(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: filteredMemories.length,
-          itemBuilder: (context, index) {
-            return MemoryCard(memory: filteredMemories[index]);
+          itemCount: sortedDates.length,
+          itemBuilder: (context, dateIndex) {
+            final date = sortedDates[dateIndex];
+            final memoriesForDate = groupedMemories[date]!;
+            
+            final months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+            final dateString = '${date.day} ${months[date.month - 1]} ${date.year}';
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12, top: 12),
+                  child: Text(
+                    dateString,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: memoriesForDate.length,
+                  itemBuilder: (context, index) {
+                    return MemoryCard(memory: memoriesForDate[index]);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            );
           },
         );
       },
@@ -346,9 +379,27 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
   List<Memory> _getMemoriesForDate(DateTime date) {
     final service = Provider.of<MemoryService>(context, listen: false);
     return service.memories.where((memory) {
-      return memory.createdAt.year == date.year &&
-          memory.createdAt.month == date.month &&
-          memory.createdAt.day == date.day;
+      // memoryDate'i kullan, yoksa createdAt'ı kullan
+      final checkDate = memory.memoryDate ?? memory.createdAt;
+      return checkDate.year == date.year &&
+          checkDate.month == date.month &&
+          checkDate.day == date.day;
     }).toList();
+  }
+
+  Map<DateTime, List<Memory>> _groupMemoriesByDate(List<Memory> memories) {
+    final grouped = <DateTime, List<Memory>>{};
+    
+    for (var memory in memories) {
+      final checkDate = memory.memoryDate ?? memory.createdAt;
+      final dateKey = DateTime(checkDate.year, checkDate.month, checkDate.day);
+      
+      if (!grouped.containsKey(dateKey)) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey]!.add(memory);
+    }
+    
+    return grouped;
   }
 }
