@@ -1,6 +1,6 @@
-import { 
-  LoginRequest, 
-  LoginResponse, 
+import {
+  LoginRequest,
+  LoginResponse,
   User,
   Memory,
   CreateMemoryRequest,
@@ -58,12 +58,12 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-    
+
     // Store token
     if (typeof window !== 'undefined' && response.token) {
       localStorage.setItem('token', response.token);
     }
-    
+
     return response;
   }
 
@@ -72,12 +72,12 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-    
+
     // Store token
     if (typeof window !== 'undefined' && response.token) {
       localStorage.setItem('token', response.token);
     }
-    
+
     return response;
   }
 
@@ -234,6 +234,48 @@ class ApiService {
     }
 
     return response.json();
+  }
+
+  // Summaries APIs
+  async getAvailableWeeks(year: number, month: number): Promise<Array<{
+    weekStart: string;
+    weekEnd: string;
+    photoCount: number;
+  }>> {
+    return this.request(`/api/summaries/weeks?year=${year}&month=${month}`);
+  }
+
+  async generateWeeklyCollage(weekStart: string): Promise<{
+    filename: string;
+    url: string;
+    downloadUrl: string;
+  }> {
+    return this.request('/api/summaries/collage/weekly', {
+      method: 'POST',
+      body: JSON.stringify({ weekStart }),
+    });
+  }
+
+  async generateMonthlyCollage(year: number, month: number): Promise<{
+    filename: string;
+    url: string;
+    downloadUrl: string;
+  }> {
+    return this.request('/api/summaries/collage/monthly', {
+      method: 'POST',
+      body: JSON.stringify({ year, month }),
+    });
+  }
+
+  async generateYearlyCollage(year: number): Promise<{
+    filename: string;
+    url: string;
+    downloadUrl: string;
+  }> {
+    return this.request('/api/summaries/collage/yearly', {
+      method: 'POST',
+      body: JSON.stringify({ year }),
+    });
   }
 
   getFileUrl(filePath: string): string {

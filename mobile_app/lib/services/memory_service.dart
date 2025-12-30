@@ -139,4 +139,80 @@ class MemoryService extends ChangeNotifier {
       return null;
     }
   }
+
+  // Collage API methods
+  Future<List<Map<String, dynamic>>> getAvailableWeeks(
+      int year, int month) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '${ApiConstants.baseUrl}/api/summaries/weeks?year=$year&month=$month'),
+        headers: _authService.getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+      return [];
+    } catch (e) {
+      print('Get available weeks error: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> generateWeeklyCollage(
+      String weekStart) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/api/summaries/collage/weekly'),
+        headers: _authService.getAuthHeaders(),
+        body: jsonEncode({'weekStart': weekStart}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Generate weekly collage error: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> generateMonthlyCollage(
+      int year, int month) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/api/summaries/collage/monthly'),
+        headers: _authService.getAuthHeaders(),
+        body: jsonEncode({'year': year, 'month': month}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Generate monthly collage error: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> generateYearlyCollage(int year) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/api/summaries/collage/yearly'),
+        headers: _authService.getAuthHeaders(),
+        body: jsonEncode({'year': year}),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print('Generate yearly collage error: $e');
+      return null;
+    }
+  }
 }

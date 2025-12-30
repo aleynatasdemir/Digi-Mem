@@ -91,6 +91,8 @@ builder.Services.AddSingleton<DigiMem.Services.IEncryptionService, DigiMem.Servi
 builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifyOAuthService, DigiMem.Services.Spotify.SpotifyOAuthService>();
 builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifyApiService, DigiMem.Services.Spotify.SpotifyApiService>();
 builder.Services.AddScoped<DigiMem.Services.Spotify.ISpotifySyncService, DigiMem.Services.Spotify.SpotifySyncService>();
+builder.Services.AddScoped<DigiMem.Services.ICollageService, DigiMem.Services.CollageService>();
+builder.Services.AddHttpClient();
 
 // Controllers
 builder.Services.AddControllers();
@@ -121,6 +123,9 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+    
+    // Handle file upload
+    c.OperationFilter<DigiMem.Filters.FileUploadOperation>();
 });
 
 var app = builder.Build();
@@ -144,7 +149,7 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 // CORS - Hem web hem mobil için
-app.UseCors("AllowMobile");
+app.UseCors("AllowFrontend");
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();

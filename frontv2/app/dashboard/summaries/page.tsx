@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
-import { Calendar, Image, Music, FileText, Video, Sparkles, Brain, Box, Settings } from 'lucide-react'
+import { Calendar, Image, Music, FileText, Video, Sparkles, Brain, Box, Settings, Download } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { SettingsModal } from '@/components/settings-modal'
+import { apiService } from '@/lib/api'
 
 // Mock data - haftalık yükleme verileri
 const weeklyData = [
@@ -42,19 +44,114 @@ export default function SummariesPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly" | "yearly" | null>(null)
   const [selectedType, setSelectedType] = useState<"collage" | "stats" | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedCollage, setGeneratedCollage] = useState<{
+    filename: string;
+    url: string;
+    downloadUrl: string;
+  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  // Week selection state
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [availableWeeks, setAvailableWeeks] = useState<Array<{
+    weekStart: string;
+    weekEnd: string;
+    photoCount: number;
+  }>>([])
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
 
   const totalWeeklyUploads = weeklyData.reduce((acc, day) => acc + day.uploads, 0)
   const weeklyAverage = (totalWeeklyUploads / 7).toFixed(1)
   const monthlyAverage = ((totalWeeklyUploads / 7) * 30).toFixed(0)
 
-  const handlePeriodClick = (period: "weekly" | "monthly" | "yearly") => {
+  const handlePeriodClick = async (period: "weekly" | "monthly" | "yearly") => {
     setSelectedPeriod(period)
     setSelectedType(null)
+    setGeneratedCollage(null)
+    setError(null)
+
+    // For weekly, fetch available weeks
+    if (period === "weekly") {
+      try {
+        const weeks = await apiService.getAvailableWeeks(selectedYear, selectedMonth)
+        setAvailableWeeks(weeks)
+      } catch (err) {
+        console.error("Error fetching weeks:", err)
+        setError("Haftalar yüklenirken hata oluştu")
+      }
+    }
   }
 
   const handleTypeClick = (type: "collage" | "stats") => {
     setSelectedType(type)
-    // Burada gerçek özet oluşturma işlemi yapılacak
+    if (type === "collage") {
+      generateCollage()
+    }
+  }
+
+  const generateCollage = async () => {
+    setIsGenerating(true)
+    setError(null)
+
+    try {
+      let result
+
+      if (selectedPeriod === "weekly") {
+        if (!selectedWeek) {
+          setError("Lütfen bir hafta seçin")
+          setIsGenerating(false)
+          return
+        }
+        result = await apiService.generateWeeklyCollage(selectedWeek)
+      } else if (selectedPeriod === "monthly") {
+        result = await apiService.generateMonthlyCollage(selectedYear, selectedMonth)
+      } else if (selectedPeriod === "yearly") {
+        result = await apiService.generateYearlyCollage(selectedYear)
+      }
+
+      if (result) {
+        setGeneratedCollage(result)
+      }
+    } catch (err: any) {
+      console.error("Error generating collage:", err)
+      setError(err.message || "Kolaj oluşturulurken hata oluştu")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const downloadCollage = async () => {
+    if (!generatedCollage) return
+
+    try {
+      // Fetch with auth token
+      const response = await fetch(apiService.getFileUrl(generatedCollage.downloadUrl), {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      if (!response.ok) {
+        setError('Kolaj indirilemedi')
+        return
+      }
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = generatedCollage.filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download error:', err)
+      setError('Kolaj indirilemedi')
+    }
   }
 
   return (
@@ -154,8 +251,8 @@ export default function SummariesPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="day" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ 
+                <Tooltip
+                  contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
@@ -179,17 +276,17 @@ export default function SummariesPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="week" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ 
+                <Tooltip
+                  contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
                   }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="uploads" 
-                  stroke="hsl(var(--primary))" 
+                <Line
+                  type="monotone"
+                  dataKey="uploads"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   dot={{ fill: 'hsl(var(--primary))', r: 4 }}
                 />
@@ -215,8 +312,8 @@ export default function SummariesPage() {
                   <span className="font-medium">{formatData.photo}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-chart-1 rounded-full transition-all" 
+                  <div
+                    className="h-full bg-chart-1 rounded-full transition-all"
                     style={{ width: `${(formatData.photo / 95) * 100}%` }}
                   />
                 </div>
@@ -231,8 +328,8 @@ export default function SummariesPage() {
                   <span className="font-medium">{formatData.video}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-chart-2 rounded-full transition-all" 
+                  <div
+                    className="h-full bg-chart-2 rounded-full transition-all"
                     style={{ width: `${(formatData.video / 95) * 100}%` }}
                   />
                 </div>
@@ -247,8 +344,8 @@ export default function SummariesPage() {
                   <span className="font-medium">{formatData.text}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-chart-3 rounded-full transition-all" 
+                  <div
+                    className="h-full bg-chart-3 rounded-full transition-all"
                     style={{ width: `${(formatData.text / 95) * 100}%` }}
                   />
                 </div>
@@ -263,8 +360,8 @@ export default function SummariesPage() {
                   <span className="font-medium">{formatData.audio}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-chart-4 rounded-full transition-all" 
+                  <div
+                    className="h-full bg-chart-4 rounded-full transition-all"
                     style={{ width: `${(formatData.audio / 95) * 100}%` }}
                   />
                 </div>
@@ -279,8 +376,8 @@ export default function SummariesPage() {
                   <span className="font-medium">{formatData.music}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-chart-5 rounded-full transition-all" 
+                  <div
+                    className="h-full bg-chart-5 rounded-full transition-all"
                     style={{ width: `${(formatData.music / 95) * 100}%` }}
                   />
                 </div>
@@ -327,8 +424,8 @@ export default function SummariesPage() {
       </div>
 
       {/* Özet Tipi Seçim Modal */}
-      <Dialog open={selectedPeriod !== null} onOpenChange={(open) => !open && setSelectedPeriod(null)}>
-        <DialogContent>
+      <Dialog open={selectedPeriod !== null && !generatedCollage} onOpenChange={(open) => !open && setSelectedPeriod(null)}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {selectedPeriod === "weekly" && "Haftalık Özet"}
@@ -336,48 +433,183 @@ export default function SummariesPage() {
               {selectedPeriod === "yearly" && "Yıllık Özet"}
             </DialogTitle>
             <DialogDescription>
-              Hangi tür özet oluşturmak istersiniz?
+              {selectedPeriod === "weekly" && "Hangi hafta için kolaj oluşturmak istersiniz?"}
+              {selectedPeriod === "monthly" && "Hangi ay için kolaj oluşturmak istersiniz?"}
+              {selectedPeriod === "yearly" && "Hangi yıl için kolaj oluşturmak istersiniz?"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-20 flex flex-col gap-2 hover:border-primary hover:bg-primary/5"
-              onClick={() => handleTypeClick("collage")}
-            >
-              <Image className="h-6 w-6" />
-              <span className="font-semibold">Kolaj Oluştur</span>
-              <span className="text-xs text-muted-foreground">Anılarınızdan görsel kolaj</span>
-            </Button>
+
+          <div className="space-y-4 py-4">
+            {error && (
+              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {selectedPeriod === "weekly" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Yıl</label>
+                    <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2024, 2025, 2026].map(year => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Ay</label>
+                    <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                          <SelectItem key={month} value={month.toString()}>
+                            {new Date(2000, month - 1).toLocaleDateString('tr-TR', { month: 'long' })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {availableWeeks.length > 0 ? (
+                  <div>
+                    <label className="text-sm font-medium">Hafta Seçin</label>
+                    <Select value={selectedWeek || ""} onValueChange={setSelectedWeek}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Bir hafta seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableWeeks.map((week, idx) => (
+                          <SelectItem key={idx} value={week.weekStart}>
+                            {new Date(week.weekStart).toLocaleDateString('tr-TR')} - {new Date(week.weekEnd).toLocaleDateString('tr-TR')} ({week.photoCount} fotoğraf)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Bu ay için fotoğraf bulunamadı</p>
+                )}
+              </div>
+            )}
+
+            {selectedPeriod === "monthly" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Yıl</label>
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2024, 2025, 2026].map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Ay</label>
+                  <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                        <SelectItem key={month} value={month.toString()}>
+                          {new Date(2000, month - 1).toLocaleDateString('tr-TR', { month: 'long' })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {selectedPeriod === "yearly" && (
+              <div>
+                <label className="text-sm font-medium">Yıl</label>
+                <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026].map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <Button
               size="lg"
-              variant="outline"
-              className="h-20 flex flex-col gap-2 hover:border-primary hover:bg-primary/5"
-              onClick={() => handleTypeClick("stats")}
+              className="w-full"
+              onClick={() => handleTypeClick("collage")}
+              disabled={isGenerating || (selectedPeriod === "weekly" && !selectedWeek)}
             >
-              <BarChart className="h-6 w-6" />
-              <span className="font-semibold">İstatistik Özeti</span>
-              <span className="text-xs text-muted-foreground">Detaylı istatistik raporu</span>
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Kolaj Oluşturuluyor...
+                </>
+              ) : (
+                <>
+                  <Image className="h-5 w-5 mr-2" />
+                  Kolaj Oluştur
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Özet Oluşturma Onay Modal */}
-      <Dialog open={selectedType !== null} onOpenChange={(open) => !open && setSelectedType(null)}>
-        <DialogContent>
+      {/* Kolaj Önizleme Modal */}
+      <Dialog open={generatedCollage !== null} onOpenChange={(open) => !open && setGeneratedCollage(null)}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Özet Oluşturuluyor</DialogTitle>
+            <DialogTitle>Kolajınız Hazır!</DialogTitle>
             <DialogDescription>
-              {selectedType === "collage" 
-                ? "Anılarınızdan kolaj oluşturuluyor..." 
-                : "İstatistik özeti hazırlanıyor..."}
+              Kolajınızı önizleyebilir ve indirebilirsiniz.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="space-y-4 py-4">
+            {generatedCollage && (
+              <>
+                <div className="relative aspect-square w-full overflow-hidden rounded-lg border">
+                  <img
+                    src={apiService.getFileUrl(generatedCollage.url)}
+                    alt="Generated collage"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="lg"
+                    className="flex-1"
+                    onClick={downloadCollage}
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Kolajı İndir
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => setGeneratedCollage(null)}
+                  >
+                    Kapat
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

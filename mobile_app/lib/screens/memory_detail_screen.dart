@@ -130,7 +130,7 @@ class MemoryDetailScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Media
-            if (memory.fileUrl != null) ...[
+            if (memory.fullFileUrl != null) ...[
               Text(
                 'Ortam Dosyası',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -141,7 +141,7 @@ class MemoryDetailScreen extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
-                  imageUrl: memory.fileUrl!,
+                  imageUrl: memory.fullFileUrl!,
                   width: double.infinity,
                   height: 300,
                   fit: BoxFit.cover,
@@ -179,11 +179,11 @@ class MemoryDetailScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    if (memory.albumArtUrl != null)
+                    if (memory.fullAlbumArtUrl != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: CachedNetworkImage(
-                          imageUrl: memory.albumArtUrl!,
+                          imageUrl: memory.fullAlbumArtUrl!,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,

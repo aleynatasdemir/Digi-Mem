@@ -121,12 +121,12 @@ class MemoryCard extends StatelessWidget {
               ),
               
               // Media
-              if (memory.fileUrl != null) ...[
+              if (memory.fullFileUrl != null) ...[
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
-                    imageUrl: memory.thumbnailUrl ?? memory.fileUrl!,
+                    imageUrl: memory.fullThumbnailUrl ?? memory.fullFileUrl!,
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,

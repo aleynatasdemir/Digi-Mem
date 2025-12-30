@@ -136,4 +136,28 @@ class Memory {
         return MemoryType.text;
     }
   }
+
+  // Helper methods to convert relative URLs to absolute URLs
+  String? get fullFileUrl {
+    if (fileUrl == null) return null;
+    if (fileUrl!.startsWith('http')) return fileUrl;
+    // Remove /api from base URL and append the file path
+    const baseUrl = 'http://10.0.2.2:5299';
+    return '$baseUrl$fileUrl';
+  }
+
+  String? get fullThumbnailUrl {
+    if (thumbnailUrl == null) return null;
+    if (thumbnailUrl!.startsWith('http')) return thumbnailUrl;
+    const baseUrl = 'http://10.0.2.2:5299';
+    return '$baseUrl$thumbnailUrl';
+  }
+
+  String? get fullAlbumArtUrl {
+    if (albumArtUrl == null) return null;
+    // Spotify album art URLs are already absolute
+    if (albumArtUrl!.startsWith('http')) return albumArtUrl;
+    const baseUrl = 'http://10.0.2.2:5299';
+    return '$baseUrl$albumArtUrl';
+  }
 }

@@ -14,6 +14,15 @@ class _SummariesScreenState extends State<SummariesScreen> {
   String? _periodType; // WEEK, MONTH, YEAR
   String? _specificDateValue;
   String? _generationType; // SUMMARY, COLLAGE
+  
+  // Collage state
+  int _selectedYear = DateTime.now().year;
+  int _selectedMonth = DateTime.now().month;
+  List<Map<String, dynamic>> _availableWeeks = [];
+  String? _selectedWeek;
+  Map<String, dynamic>? _generatedCollage;
+  bool _isGenerating = false;
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
@@ -193,18 +202,170 @@ class _SummariesScreenState extends State<SummariesScreen> {
               ),
         ),
         const SizedBox(height: 16),
-        TextField(
-          decoration: InputDecoration(
-            hintText: _periodType == 'YEAR' ? 'Örn: 2024' : 'Tarih seçin',
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
+        if (_periodType == 'WEEK') ...[
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYear,
+                  decoration: InputDecoration(
+                    labelText: 'Yıl',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: [2024, 2025, 2026]
+                      .map((year) => DropdownMenuItem(
+                            value: year,
+                            child: Text('$year'),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedYear = value;
+                        _loadAvailableWeeks();
+                      });
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: _selectedMonth,
+                  decoration: InputDecoration(
+                    labelText: 'Ay',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: List.generate(12, (i) => i + 1)
+                      .map((month) => DropdownMenuItem(
+                            value: month,
+                            child: Text(_getMonthName(month)),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedMonth = value;
+                        _loadAvailableWeeks();
+                      });
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
-          onChanged: (value) => _specificDateValue = value,
-        ),
+          const SizedBox(height: 12),
+          if (_availableWeeks.isNotEmpty)
+            DropdownButtonFormField<String>(
+              value: _selectedWeek,
+              decoration: InputDecoration(
+                labelText: 'Hafta Seçin',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              items: _availableWeeks
+                  .map((week) => DropdownMenuItem<String>(
+                        value: week['weekStart'],
+                        child: Text(
+                            '${_formatDate(week['weekStart'])} - ${_formatDate(week['weekEnd'])} (${week['photoCount']} fotoğraf)'),
+                      ))
+                  .toList(),
+              onChanged: (value) => setState(() => _selectedWeek = value),
+            )
+          else
+            Text(
+              'Bu ay için fotoğraf bulunamadı',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+        ] else if (_periodType == 'MONTH') ...[
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYear,
+                  decoration: InputDecoration(
+                    labelText: 'Yıl',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: [2024, 2025, 2026]
+                      .map((year) => DropdownMenuItem(
+                            value: year,
+                            child: Text('$year'),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _selectedYear = value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<int>(
+                  value: _selectedMonth,
+                  decoration: InputDecoration(
+                    labelText: 'Ay',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: List.generate(12, (i) => i + 1)
+                      .map((month) => DropdownMenuItem(
+                            value: month,
+                            child: Text(_getMonthName(month)),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => _selectedMonth = value);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          DropdownButtonFormField<int>(
+            value: _selectedYear,
+            decoration: InputDecoration(
+              labelText: 'Yıl',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            items: [2024, 2025, 2026]
+                .map((year) => DropdownMenuItem(
+                      value: year,
+                      child: Text('$year'),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) setState(() => _selectedYear = value);
+            },
+          ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [
@@ -227,6 +388,28 @@ class _SummariesScreenState extends State<SummariesScreen> {
         ),
       ],
     );
+  }
+
+  void _loadAvailableWeeks() async {
+    final service = Provider.of<MemoryService>(context, listen: false);
+    final weeks = await service.getAvailableWeeks(_selectedYear, _selectedMonth);
+    setState(() {
+      _availableWeeks = weeks;
+      _selectedWeek = null;
+    });
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    return months[month - 1];
+  }
+
+  String _formatDate(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    return '${date.day}.${date.month}.${date.year}';
   }
 
   Widget _buildStep3ContentType() {
@@ -256,10 +439,15 @@ class _SummariesScreenState extends State<SummariesScreen> {
           subtitle: 'Bu döneme ait fotoğraflardan bir kolaj oluştur',
           icon: Icons.grid_view_rounded,
           color: Colors.purple,
-          onTap: () => setState(() {
-            _generationType = 'COLLAGE';
-            _step = 4;
-          }),
+          onTap: () async {
+            setState(() {
+              _generationType = 'COLLAGE';
+              _isGenerating = true;
+              _error = null;
+            });
+            await _generateCollage();
+            setState(() => _step = 4);
+          },
         ),
         const SizedBox(height: 16),
         TextButton(
@@ -271,6 +459,44 @@ class _SummariesScreenState extends State<SummariesScreen> {
   }
 
   Widget _buildStep4Result() {
+    if (_isGenerating) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('Kolaj oluşturuluyor...'),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => setState(() {
+                _step = 1;
+                _error = null;
+              }),
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -295,21 +521,90 @@ class _SummariesScreenState extends State<SummariesScreen> {
                   _periodType = null;
                   _specificDateValue = null;
                   _generationType = null;
+                  _generatedCollage = null;
                 }),
                 child: const Text('Yeni Oluştur'),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            _generationType == 'SUMMARY'
-                ? 'Bu dönemde toplam ${Provider.of<MemoryService>(context, listen: false).memories.length} anı eklendi. En çok fotoğraf ve video tipi anılar paylaşıldı. Güzel günler geçirdiğiniz anlaşılıyor!'
-                : 'Kolaj görüntüsü burada gösterilecek',
-            style: TextStyle(color: Colors.grey[700], height: 1.5),
-          ),
+          if (_generationType == 'SUMMARY')
+            Text(
+              'Bu dönemde toplam ${Provider.of<MemoryService>(context, listen: false).memories.length} anı eklendi. En çok fotoğraf ve video tipi anılar paylaşıldı. Güzel günler geçirdiğiniz anlaşılıyor!',
+              style: TextStyle(color: Colors.grey[700], height: 1.5),
+            )
+          else if (_generatedCollage != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                'http://10.0.2.2:5299${_generatedCollage!['url']}',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Text('Kolaj yüklenemedi'),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Download functionality will be added
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('İndirme özelliği yakında eklenecek')),
+                );
+              },
+              icon: Icon(Icons.download),
+              label: Text('Kolajı İndir'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _generateCollage() async {
+    final service = Provider.of<MemoryService>(context, listen: false);
+    
+    try {
+      Map<String, dynamic>? result;
+      
+      if (_periodType == 'WEEK') {
+        if (_selectedWeek == null) {
+          setState(() => _error = 'Lütfen bir hafta seçin');
+          return;
+        }
+        result = await service.generateWeeklyCollage(_selectedWeek!);
+      } else if (_periodType == 'MONTH') {
+        result = await service.generateMonthlyCollage(_selectedYear, _selectedMonth);
+      } else if (_periodType == 'YEAR') {
+        result = await service.generateYearlyCollage(_selectedYear);
+      }
+      
+      if (result != null) {
+        setState(() {
+          _generatedCollage = result;
+          _isGenerating = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Kolaj oluşturulamadı';
+          _isGenerating = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Bir hata oluştu: $e';
+        _isGenerating = false;
+      });
+    }
   }
 }
 

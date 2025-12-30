@@ -63,7 +63,8 @@ public class UserController : ControllerBase
 
     // POST: api/user/profile-photo
     [HttpPost("profile-photo")]
-    public async Task<ActionResult<object>> UploadProfilePhoto([FromForm] IFormFile file)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<object>> UploadProfilePhoto(IFormFile file)
     {
         try
         {
