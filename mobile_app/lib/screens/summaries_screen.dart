@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../services/memory_service.dart';
+import '../models/memory.dart';
 
 class SummariesScreen extends StatefulWidget {
   const SummariesScreen({Key? key}) : super(key: key);
@@ -41,11 +43,141 @@ class _SummariesScreenState extends State<SummariesScreen> {
             const SizedBox(height: 24),
             _buildStatsCards(),
             const SizedBox(height: 24),
+            _buildChartSection(),
+            const SizedBox(height: 24),
             _buildWizard(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildChartSection() {
+    return Consumer<MemoryService>(
+      builder: (context, service, _) {
+        final data = _getMonthlyData(service.memories);
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Aylık Anı Grafiği',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: data.values.fold(0, (p, c) => c > p ? c : p).toDouble() + 5,
+                    barTouchData: BarTouchData(
+                      enabled: false,
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => Colors.blueGrey,
+                        tooltipPadding: const EdgeInsets.all(8),
+                        tooltipMargin: 8,
+                        getTooltipItem: (
+                          BarChartGroupData group,
+                          int groupIndex,
+                          BarChartRodData rod,
+                          int rodIndex,
+                        ) {
+                          return BarTooltipItem(
+                            rod.toY.round().toString(),
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                            if (value.toInt() >= 0 && value.toInt() < 12) {
+                               return Padding(
+                                 padding: const EdgeInsets.only(top: 8.0),
+                                 child: Text(
+                                  months[value.toInt()],
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12
+                                  ),
+                                                         ),
+                               );
+                            }
+                            return const SizedBox();
+                          },
+                          reservedSize: 30,
+                        ),
+                      ),
+                      leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: data.entries.map((e) {
+                      return BarChartGroupData(
+                        x: e.key,
+                        barRods: [
+                          BarChartRodData(
+                            toY: e.value.toDouble(),
+                            color: Theme.of(context).primaryColor,
+                            width: 16,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(4),
+                              topRight: Radius.circular(4),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Map<int, int> _getMonthlyData(List<Memory> memories) {
+    // Initialize map with 0 for all months (0-11)
+    final map = Map<int, int>.fromIterable(
+      List.generate(12, (i) => i),
+      key: (i) => i,
+      value: (_) => 0,
+    );
+
+    final currentYear = DateTime.now().year;
+
+    for (var memory in memories) {
+      if (memory.createdAt.year == currentYear) {
+        map[memory.createdAt.month - 1] = (map[memory.createdAt.month - 1] ?? 0) + 1;
+      }
+    }
+    return map;
   }
 
   Widget _buildStatsCards() {
@@ -65,7 +197,7 @@ class _SummariesScreenState extends State<SummariesScreen> {
                     title: 'Toplam Anı',
                     value: '$total',
                     icon: Icons.collections_rounded,
-                    color: Colors.blue,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -74,18 +206,10 @@ class _SummariesScreenState extends State<SummariesScreen> {
                     title: 'Bu Ay',
                     value: '$thisMonth',
                     icon: Icons.calendar_today_rounded,
-                    color: Colors.green,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            _StatCard(
-              title: 'Haftalık Aktivite',
-              value: '+12%',
-              icon: Icons.trending_up_rounded,
-              color: Colors.purple,
-              isWide: true,
             ),
           ],
         );
@@ -97,16 +221,9 @@ class _SummariesScreenState extends State<SummariesScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.blue.shade50,
-            Colors.indigo.shade50,
-          ],
-        ),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
@@ -537,7 +654,11 @@ class _SummariesScreenState extends State<SummariesScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                'http://10.0.2.2:5299${_generatedCollage!['url']}',
+                // Use a helper method or verify if _generatedCollage['url'] needs fix
+                // Assuming backend returns relative path like /uploads/...
+                _generatedCollage!['url'].toString().startsWith('http')
+                    ? _generatedCollage!['url']
+                    : 'http://10.0.2.2:5299${_generatedCollage!['url']}',
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
@@ -628,7 +749,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[300]!),
       ),
@@ -684,7 +805,7 @@ class _PeriodButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey[300]!),
         ),
@@ -729,7 +850,7 @@ class _ContentTypeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey[300]!),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../services/memory_service.dart';
 import '../models/memory.dart';
 import '../widgets/memory_card.dart';
@@ -12,16 +13,11 @@ class ArchivesScreen extends StatefulWidget {
 }
 
 class _ArchivesScreenState extends State<ArchivesScreen> {
-  DateTime _selectedMonth = DateTime.now();
-  DateTime? _selectedDate;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   String _searchQuery = '';
   String _selectedType = 'ALL';
-
-  // Türkçe ay isimleri
-  final List<String> _monthNames = [
-    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +38,17 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
                 Consumer<MemoryService>(
                   builder: (context, service, _) => Text(
                     'Toplam ${service.memories.length} anı saklanıyor.',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      fontSize: 13
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          _buildCalendar(),
+          _buildTableCalendar(),
+          const Divider(height: 1),
           _buildFilters(),
           Expanded(
             child: _buildMemoriesList(),
@@ -58,176 +58,72 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
     );
   }
 
-  Widget _buildCalendar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${_monthNames[_selectedMonth.month - 1]} ${_selectedMonth.year}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: () {
-                      setState(() {
-                        _selectedMonth = DateTime(
-                          _selectedMonth.year,
-                          _selectedMonth.month - 1,
-                        );
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () {
-                      setState(() {
-                        _selectedMonth = DateTime(
-                          _selectedMonth.year,
-                          _selectedMonth.month + 1,
-                        );
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildTableCalendar() {
+    return Consumer<MemoryService>(
+      builder: (context, service, _) {
+        return TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.now().add(const Duration(days: 365)),
+          focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          selectedDayPredicate: (day) {
+            return isSameDay(_selectedDay, day);
+          },
+          onDaySelected: (selectedDay, focusedDay) {
+            if (!isSameDay(_selectedDay, selectedDay)) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            } else {
+               setState(() {
+                _selectedDay = null;
+                _focusedDay = focusedDay;
+              });
+            }
+          },
+          onFormatChanged: (format) {
+            if (_calendarFormat != format) {
+              setState(() {
+                _calendarFormat = format;
+              });
+            }
+          },
+          onPageChanged: (focusedDay) {
+            _focusedDay = focusedDay;
+          },
+          eventLoader: (day) {
+            return _getMemoriesForDate(day, service.memories);
+          },
+          calendarStyle: CalendarStyle(
+            markerDecoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              shape: BoxShape.circle,
+            ),
+            todayDecoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(height: 12),
-          _buildCalendarGrid(),
-        ],
-      ),
+          headerStyle: HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCalendarGrid() {
-    final daysInMonth = DateUtils.getDaysInMonth(
-      _selectedMonth.year,
-      _selectedMonth.month,
-    );
-    final firstDayOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-    final startOffset = (firstDayOfMonth.weekday - 1) % 7;
-
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
-              .map((day) => SizedBox(
-                    width: 40,
-                    child: Text(
-                      day,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 240,
-          child: GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-            ),
-            itemCount: startOffset + daysInMonth,
-            itemBuilder: (context, index) {
-              if (index < startOffset) {
-                return const SizedBox.shrink();
-              }
-
-              final day = index - startOffset + 1;
-              final date = DateTime(_selectedMonth.year, _selectedMonth.month, day);
-              final memories = _getMemoriesForDate(date);
-              final isSelected = _selectedDate != null &&
-                  _selectedDate!.year == date.year &&
-                  _selectedDate!.month == date.month &&
-                  _selectedDate!.day == date.day;
-              final isToday = DateTime.now().year == date.year &&
-                  DateTime.now().month == date.month &&
-                  DateTime.now().day == date.day;
-
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedDate = isSelected ? null : date;
-                  });
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).primaryColor
-                        : memories.isNotEmpty
-                            ? Theme.of(context).primaryColor.withOpacity(0.1)
-                            : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: isToday
-                        ? Border.all(color: Theme.of(context).primaryColor, width: 2)
-                        : null,
-                  ),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Text(
-                          '$day',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : memories.isNotEmpty
-                                    ? Theme.of(context).primaryColor
-                                    : Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                      if (memories.isNotEmpty && !isSelected)
-                        Positioned(
-                          bottom: 2,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Container(
-                              width: 4,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
+  List<Memory> _getMemoriesForDate(DateTime date, List<Memory> memories) {
+    return memories.where((memory) {
+      final checkDate = memory.memoryDate ?? memory.createdAt;
+      return isSameDay(checkDate, date);
+    }).toList();
   }
 
   Widget _buildFilters() {
@@ -257,6 +153,7 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
           DropdownButton<String>(
             value: _selectedType,
             borderRadius: BorderRadius.circular(12),
+            underline: Container(),
             items: const [
               DropdownMenuItem(value: 'ALL', child: Text('Tümü')),
               DropdownMenuItem(value: 'PHOTO', child: Text('Fotoğraf')),
@@ -281,10 +178,7 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
       builder: (context, service, _) {
         final filteredMemories = service.memories.where((memory) {
           final checkDate = memory.memoryDate ?? memory.createdAt;
-          final matchesDate = _selectedDate == null ||
-              (checkDate.year == _selectedDate!.year &&
-                  checkDate.month == _selectedDate!.month &&
-                  checkDate.day == _selectedDate!.day);
+          final matchesDate = _selectedDay == null || isSameDay(checkDate, _selectedDay);
 
           final matchesSearch = _searchQuery.isEmpty ||
               (memory.title ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -315,13 +209,13 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
                 ),
                 if (_searchQuery.isNotEmpty ||
                     _selectedType != 'ALL' ||
-                    _selectedDate != null)
+                    _selectedDay != null)
                   TextButton(
                     onPressed: () {
                       setState(() {
                         _searchQuery = '';
                         _selectedType = 'ALL';
-                        _selectedDate = null;
+                        _selectedDay = null;
                       });
                     },
                     child: const Text('Filtreleri Temizle'),
@@ -374,17 +268,6 @@ class _ArchivesScreenState extends State<ArchivesScreen> {
         );
       },
     );
-  }
-
-  List<Memory> _getMemoriesForDate(DateTime date) {
-    final service = Provider.of<MemoryService>(context, listen: false);
-    return service.memories.where((memory) {
-      // memoryDate'i kullan, yoksa createdAt'ı kullan
-      final checkDate = memory.memoryDate ?? memory.createdAt;
-      return checkDate.year == date.year &&
-          checkDate.month == date.month &&
-          checkDate.day == date.day;
-    }).toList();
   }
 
   Map<DateTime, List<Memory>> _groupMemoriesByDate(List<Memory> memories) {

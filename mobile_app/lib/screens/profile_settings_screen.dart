@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/spotify_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
@@ -16,9 +17,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   late TextEditingController _currentPasswordController;
   late TextEditingController _newPasswordController;
   late TextEditingController _confirmPasswordController;
+  late SpotifyService _spotifyService;
   
   bool _isLoading = false;
   bool _showPasswordFields = false;
+  Map<String, dynamic>? _spotifyStatus;
 
   @override
   void initState() {
@@ -29,6 +32,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     _currentPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+    _spotifyService = SpotifyService(authService);
+    _loadSpotifyStatus();
+  }
+
+  Future<void> _loadSpotifyStatus() async {
+    final status = await _spotifyService.getStatus();
+    if (mounted) {
+      setState(() {
+        _spotifyStatus = status;
+      });
+    }
   }
 
   @override
@@ -179,198 +193,209 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       appBar: AppBar(
         title: const Text('Profil Ayarları'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Photo
-            Center(
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        child: Text(
-                          (authService.user?.name ?? 'U').substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 48,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _pickAndUploadProfilePhoto,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Profil Fotoğrafı Yükle',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Profile Information Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+      body: ChangeNotifierProvider.value(
+        value: _spotifyService,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile Photo
+              Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: Text(
+                            (authService.user?.name ?? 'U').substring(0, 1).toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 48,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _pickAndUploadProfilePhoto,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Profil Bilgisi',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Ad/Soyad',
-                        hintText: 'Adınızı girin',
-                        prefixIcon: const Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'E-posta',
-                        hintText: 'E-posta adresiniz',
-                        prefixIcon: const Icon(Icons.email),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Profili Güncelle'),
-                      ),
+                      'Profil Fotoğrafı Yükle',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-            // Password Change Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Şifre Değiştir',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+              // Spotify Integration Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Spotify Bağlantısı',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(
+                            Icons.music_note,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_spotifyStatus == null)
+                        const Center(child: CircularProgressIndicator())
+                      else if (_spotifyStatus!['connected'] == true) ...[
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Colors.green),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Bağlı',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            if (_spotifyStatus!['lastSyncedAt'] != null)
+                              Text(
+                                'Son senkron: ${_spotifyStatus!['lastSyncedAt'].toString().substring(0, 10)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: Consumer<SpotifyService>(
+                            builder: (context, service, _) => ElevatedButton(
+                              onPressed: service.isLoading
+                                  ? null
+                                  : () async {
+                                      final success = await service.sync();
+                                      if (mounted) {
+                                        if (success) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Senkronizasyon başarılı'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          _loadSpotifyStatus();
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(service.error ?? 'Hata oluştu'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              child: service.isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('Şimdi Senkronize Et'),
+                            ),
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(
-                            _showPasswordFields
-                                ? Icons.expand_less
-                                : Icons.expand_more,
+                      ] else ...[
+                        const Text('Anılarına şarkı eklemek için Spotify hesabını bağla.'),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => _spotifyService.connect(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1DB954), // Spotify Green
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Spotify ile Bağlan'),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _showPasswordFields = !_showPasswordFields;
-                            });
-                          },
                         ),
                       ],
-                    ),
-                    if (_showPasswordFields) ...[
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _currentPasswordController,
-                        decoration: InputDecoration(
-                          labelText: 'Mevcut Şifre',
-                          hintText: 'Şu anki şifrenizi girin',
-                          prefixIcon: const Icon(Icons.lock),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Profile Information Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Profil Bilgisi',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        obscureText: true,
                       ),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: _newPasswordController,
+                        controller: _nameController,
                         decoration: InputDecoration(
-                          labelText: 'Yeni Şifre',
-                          hintText: 'Yeni şifrenizi girin',
-                          prefixIcon: const Icon(Icons.lock),
+                          labelText: 'Ad/Soyad',
+                          hintText: 'Adınızı girin',
+                          prefixIcon: const Icon(Icons.person),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        obscureText: true,
                       ),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: _confirmPasswordController,
+                        controller: _emailController,
                         decoration: InputDecoration(
-                          labelText: 'Şifreyi Onayla',
-                          hintText: 'Yeni şifrenizi tekrar girin',
-                          prefixIcon: const Icon(Icons.lock),
+                          labelText: 'E-posta',
+                          hintText: 'E-posta adresiniz',
+                          prefixIcon: const Icon(Icons.email),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        obscureText: true,
+                        keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _changePassword,
+                          onPressed: _isLoading ? null : _updateProfile,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
@@ -382,44 +407,140 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('Şifreyi Değiştir'),
+                              : const Text('Profili Güncelle'),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Account Information
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hesap Bilgisi',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+              // Password Change Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Şifre Değiştir',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _showPasswordFields
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _showPasswordFields = !_showPasswordFields;
+                              });
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _accountInfoRow('Kullanıcı ID', authService.user?.id ?? '-'),
-                    const SizedBox(height: 12),
-                    _accountInfoRow(
-                      'Üye Olma Tarihi',
-                      authService.user?.createdAt != null
-                          ? '${authService.user!.createdAt.day}/${authService.user!.createdAt.month}/${authService.user!.createdAt.year}'
-                          : '-',
-                    ),
-                  ],
+                      if (_showPasswordFields) ...[
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _currentPasswordController,
+                          decoration: InputDecoration(
+                            labelText: 'Mevcut Şifre',
+                            hintText: 'Şu anki şifrenizi girin',
+                            prefixIcon: const Icon(Icons.lock),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _newPasswordController,
+                          decoration: InputDecoration(
+                            labelText: 'Yeni Şifre',
+                            hintText: 'Yeni şifrenizi girin',
+                            prefixIcon: const Icon(Icons.lock),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _confirmPasswordController,
+                          decoration: InputDecoration(
+                            labelText: 'Şifreyi Onayla',
+                            hintText: 'Yeni şifrenizi tekrar girin',
+                            prefixIcon: const Icon(Icons.lock),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _changePassword,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Şifreyi Değiştir'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 16),
+
+              // Account Information
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Hesap Bilgisi',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _accountInfoRow('Kullanıcı ID', authService.user?.id ?? '-'),
+                      const SizedBox(height: 12),
+                      _accountInfoRow(
+                        'Üye Olma Tarihi',
+                        authService.user?.createdAt != null
+                            ? '${authService.user!.createdAt.day}/${authService.user!.createdAt.month}/${authService.user!.createdAt.year}'
+                            : '-',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );

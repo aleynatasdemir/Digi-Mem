@@ -38,33 +38,23 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   _BentoCard(
                     title: 'Fotoğraf',
-                    subtitle: 'En güzel anlarını\ngörselleştir',
+                    subtitle: 'Anılarını görselleştir',
                     icon: Icons.photo_camera_rounded,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                    ),
-                    isLarge: true,
                     onTap: () => _openAddMemory(context, 'PHOTO'),
                   ),
                   _BentoCard(
                     title: 'Video',
                     icon: Icons.videocam_rounded,
-                    color: const Color(0xFFA855F7),
                     onTap: () => _openAddMemory(context, 'VIDEO'),
                   ),
                   _BentoCard(
                     title: 'Şarkı',
                     icon: Icons.music_note_rounded,
-                    color: const Color(0xFFF59E0B),
                     onTap: () => _openAddMemory(context, 'SONG'),
                   ),
                   _BentoCard(
                     title: 'Ses Kaydı',
                     icon: Icons.mic_rounded,
-                    color: const Color(0xFFEF4444),
-                    isWide: true,
                     onTap: () => _openAddMemory(context, 'AUDIO'),
                   ),
                 ],
@@ -73,12 +63,9 @@ class DashboardScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xFF10B981), Color(0xFF14B8A6)],
-                ),
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
               ),
               child: InkWell(
                 onTap: () => _openAddMemory(context, 'TEXT'),
@@ -88,10 +75,10 @@ class DashboardScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Günlük Notu Al',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Theme.of(context).primaryColor,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -100,7 +87,7 @@ class DashboardScreen extends StatelessWidget {
                           Text(
                             'Düşüncelerini, şiirlerini veya\ngünün özetini yaz.',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
                               fontSize: 13,
                             ),
                           ),
@@ -110,12 +97,12 @@ class DashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(context).primaryColor.withOpacity(0.05),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit_note_rounded,
-                        color: Colors.white,
+                        color: Theme.of(context).primaryColor,
                         size: 28,
                       ),
                     ),
@@ -159,92 +146,55 @@ class _BentoCard extends StatelessWidget {
   final String title;
   final String? subtitle;
   final IconData icon;
-  final Color? color;
-  final Gradient? gradient;
-  final bool isLarge;
-  final bool isWide;
   final VoidCallback onTap;
 
   const _BentoCard({
     required this.title,
     this.subtitle,
     required this.icon,
-    this.color,
-    this.gradient,
-    this.isLarge = false,
-    this.isWide = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GridTile(
+    return Card(
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
-        child: Container(
-          decoration: BoxDecoration(
-            color: gradient == null ? (color ?? Colors.white) : null,
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(24),
-            border: gradient == null && color == null
-                ? Border.all(color: Colors.grey[300]!)
-                : null,
-            boxShadow: [
-              if (gradient != null || color != null)
-                BoxShadow(
-                  color: (color ?? Colors.blue).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-            ],
-          ),
+        child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment:
-                isLarge ? MainAxisAlignment.center : MainAxisAlignment.start,
-            crossAxisAlignment:
-                isLarge ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: gradient != null || color != null
-                      ? Colors.white.withOpacity(0.2)
-                      : color?.withOpacity(0.1) ?? Colors.grey[100],
+                  color: Theme.of(context).primaryColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  size: isLarge ? 32 : 24,
-                  color: gradient != null || color != null
-                      ? Colors.white
-                      : color ?? Colors.grey[700],
+                  size: 24,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: isLarge ? 20 : 16,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: gradient != null || color != null
-                      ? Colors.white
-                      : Colors.black87,
                 ),
-                textAlign: isLarge ? TextAlign.center : TextAlign.start,
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   subtitle!,
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
-                    color: gradient != null || color != null
-                        ? Colors.white.withOpacity(0.9)
-                        : Colors.grey[600],
+                    color: Colors.grey[600],
                   ),
-                  textAlign: isLarge ? TextAlign.center : TextAlign.start,
                 ),
               ],
             ],

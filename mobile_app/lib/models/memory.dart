@@ -140,6 +140,10 @@ class Memory {
   // Helper methods to convert relative URLs to absolute URLs
   String? get fullFileUrl {
     if (fileUrl == null) return null;
+    // Fix localhost URLs for Android Emulator
+    if (fileUrl!.contains('localhost:5299')) {
+      return fileUrl!.replaceAll('localhost:5299', '10.0.2.2:5299');
+    }
     if (fileUrl!.startsWith('http')) return fileUrl;
     // Remove /api from base URL and append the file path
     const baseUrl = 'http://10.0.2.2:5299';
@@ -148,6 +152,10 @@ class Memory {
 
   String? get fullThumbnailUrl {
     if (thumbnailUrl == null) return null;
+    // Fix localhost URLs for Android Emulator
+    if (thumbnailUrl!.contains('localhost:5299')) {
+      return thumbnailUrl!.replaceAll('localhost:5299', '10.0.2.2:5299');
+    }
     if (thumbnailUrl!.startsWith('http')) return thumbnailUrl;
     const baseUrl = 'http://10.0.2.2:5299';
     return '$baseUrl$thumbnailUrl';
@@ -155,6 +163,10 @@ class Memory {
 
   String? get fullAlbumArtUrl {
     if (albumArtUrl == null) return null;
+    // Fix localhost URLs for Android Emulator
+    if (albumArtUrl!.contains('localhost:5299')) {
+      return albumArtUrl!.replaceAll('localhost:5299', '10.0.2.2:5299');
+    }
     // Spotify album art URLs are already absolute
     if (albumArtUrl!.startsWith('http')) return albumArtUrl;
     const baseUrl = 'http://10.0.2.2:5299';
