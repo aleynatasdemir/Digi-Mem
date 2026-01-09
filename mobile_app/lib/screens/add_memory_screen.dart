@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/memory_service.dart';
 import '../services/auth_service.dart';
+import '../services/spotify_service.dart';
 import '../models/memory.dart';
 
 class AddMemoryScreen extends StatefulWidget {
@@ -27,10 +28,33 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
   File? _selectedFile;
   String? _fileName;
 
+  // Spotify related
+  Map<String, dynamic>? _selectedSong;
+  List<dynamic> _recentTracks = [];
+  bool _isLoadingTracks = false;
+
   @override
   void initState() {
     super.initState();
     _memoryType = widget.initialType ?? 'TEXT';
+
+    if (_memoryType == 'SONG') {
+      _loadRecentTracks();
+    }
+  }
+
+  Future<void> _loadRecentTracks() async {
+    setState(() => _isLoadingTracks = true);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final spotifyService = SpotifyService(authService);
+    final tracks = await spotifyService.getTopTracks();
+
+    if (mounted) {
+      setState(() {
+        _recentTracks = tracks;
+        _isLoadingTracks = false;
+      });
+    }
   }
 
   @override
@@ -81,6 +105,77 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
     }
   }
 
+  void _showSongSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          constraints: const BoxConstraints(maxHeight: 500),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Şarkı Seç',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              if (_isLoadingTracks)
+                const Center(child: CircularProgressIndicator())
+              else if (_recentTracks.isEmpty)
+                Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.music_off, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text('Henüz dinlenen şarkı bulunamadı'),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Navigate to connect spotify?
+                        },
+                        child: const Text('Spotify Bağlantısını Kontrol Et'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _recentTracks.length,
+                    itemBuilder: (context, index) {
+                      final track = _recentTracks[index];
+                      return ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            track['albumArtUrl'] ?? '',
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.music_note),
+                          ),
+                        ),
+                        title: Text(track['trackName'] ?? 'Bilinmeyen Şarkı'),
+                        subtitle: Text(track['artistName'] ?? 'Bilinmeyen Sanatçı'),
+                        onTap: () {
+                          setState(() {
+                            _selectedSong = track;
+                            _titleController.text = '${track['trackName']} - ${track['artistName']}';
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _clearFile() {
     setState(() {
       _selectedFile = null;
@@ -88,11 +183,28 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
     });
   }
 
+  void _clearSong() {
+    setState(() {
+      _selectedSong = null;
+      _titleController.clear();
+    });
+  }
+
   Future<void> _saveMemory() async {
     if (!_formKey.currentState!.validate()) return;
 
     // Check if media types have file selected
-    if (_memoryType != 'TEXT' && _selectedFile == null) {
+    if (_memoryType == 'SONG' && _selectedSong == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen bir şarkı seçin'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_memoryType != 'TEXT' && _memoryType != 'SONG' && _selectedFile == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -117,6 +229,12 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
       createdAt: DateTime.now(),
       tags: _tags,
       userId: authService.user!.id,
+      // Song properties
+      spotifyTrackId: _selectedSong?['spotifyTrackId'],
+      songTitle: _selectedSong?['trackName'],
+      artistName: _selectedSong?['artistName'],
+      albumName: _selectedSong?['albumName'],
+      albumArtUrl: _selectedSong?['albumArtUrl'],
     );
 
     final success = await memoryService.createMemory(memory);
@@ -174,19 +292,7 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
   }
 
   Color _getMemoryTypeColor() {
-    switch (_memoryType.toUpperCase()) {
-      case 'PHOTO':
-        return Colors.blue;
-      case 'VIDEO':
-        return Colors.purple;
-      case 'AUDIO':
-        return Colors.orange;
-      case 'SONG':
-        return Colors.pink;
-      case 'TEXT':
-      default:
-        return Colors.green;
-    }
+    return Theme.of(context).primaryColor;
   }
 
   @override
@@ -220,7 +326,7 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
           children: [
             // Type Header Card
             Card(
-              color: _getMemoryTypeColor().withOpacity(0.1),
+              color: _getMemoryTypeColor().withOpacity(0.05),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -228,7 +334,7 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: _getMemoryTypeColor().withOpacity(0.2),
+                        color: _getMemoryTypeColor().withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -265,6 +371,58 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
             ),
             const SizedBox(height: 20),
 
+            // Song Selection
+            if (_memoryType == 'SONG') ...[
+               Card(
+                child: InkWell(
+                  onTap: _showSongSelectionDialog,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        if (_selectedSong != null)
+                           ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              _selectedSong!['albumArtUrl'] ?? '',
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.music_note),
+                            ),
+                           )
+                        else
+                          Icon(Icons.search, size: 28, color: Colors.grey[600]),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedSong != null ? _selectedSong!['trackName'] : 'Şarkı Seç',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              if (_selectedSong != null)
+                                Text(_selectedSong!['artistName']),
+                            ],
+                          ),
+                        ),
+                        if (_selectedSong != null)
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: _clearSong,
+                          )
+                        else
+                          const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+               ),
+               const SizedBox(height: 16),
+            ],
+
             // Title
             TextFormField(
               controller: _titleController,
@@ -292,8 +450,8 @@ class _AddMemoryScreenState extends State<AddMemoryScreen> {
             ),
             const SizedBox(height: 16),
 
-            // File Selection (for media types)
-            if (_memoryType != 'TEXT')
+            // File Selection (for media types except Song)
+            if (_memoryType != 'TEXT' && _memoryType != 'SONG')
               Card(
                 color: _getMemoryTypeColor().withOpacity(0.05),
                 child: Padding(
